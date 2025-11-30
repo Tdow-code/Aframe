@@ -385,13 +385,16 @@
 
     // --- EVENT LISTENERS (FIXED) ---
     // Ensure Click triggers file input
-    dropZone.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (fileInput) {
-            fileInput.click();
-        }
-    });
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', (e) => {
+            // Don't prevent default if clicking on the file input itself
+            if (e.target !== fileInput) {
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+            }
+        });
+    }
     
     // Ensure Change triggers handler
     fileInput.addEventListener('change', function(e) {
@@ -405,13 +408,16 @@
     });
 
     // --- CUSTOMER PROFILE UPLOAD EVENT LISTENERS ---
-    customerDropZone.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (customerFileInput) {
-            customerFileInput.click();
-        }
-    });
+    if (customerDropZone && customerFileInput) {
+        customerDropZone.addEventListener('click', (e) => {
+            // Don't prevent default if clicking on the file input itself
+            if (e.target !== customerFileInput) {
+                e.preventDefault();
+                e.stopPropagation();
+                customerFileInput.click();
+            }
+        });
+    }
     
     customerFileInput.addEventListener('change', function(e) {
         if(e.target.files && e.target.files.length > 0) {
