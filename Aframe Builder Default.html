@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aframe Builder - v49.4 (Delete Frame)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+        body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; -webkit-print-color-adjust: exact; }
+
+        /* Status Highlight */
+        .status-inactive { background-color: #fef08a !important; border-left: 6px solid #ca8a04 !important; } 
+
+        /* Standard Slab Bar */
+        .slab-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1px 4px; margin: 0; 
+            border: 1px solid #4b5563; border-left: 6px solid #4b5563; 
+            border-radius: 1px; font-size: 0.65rem; height: 19px;
+            background: white; position: relative; overflow: hidden;
+            box-shadow: 0 1px 0px rgba(0,0,0,0.1); cursor: grab; user-select: none;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        
+        .slab-bar:active { cursor: grabbing; transform: scale(1.02); z-index: 50; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+
+        /* Delete Button on Manual Slabs */
+        .delete-btn {
+            margin-left: 6px; color: #ef4444; cursor: pointer; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            width: 20px; height: 20px; border-radius: 50%;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .delete-btn:hover { background-color: #fee2e2; color: #dc2626; }
+
+        /* A-Frame Spine */
+        .a-frame-spine {
+            background: repeating-linear-gradient(135deg, #451a03, #451a03 10px, #78350f 10px, #78350f 20px);
+            height: 14px; width: 100%; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 900; letter-spacing: 0.2em; border-radius: 0;
+            border: 1px solid #000; font-size: 0.5rem; margin: 0;
+            z-index: 5;
+        }
+
+        /* Truck Layout Grid */
+        .truck-bed {
+            display: flex; flex-direction: row; 
+            gap: 0; background: #f3f4f6; border: 4px solid #1f2937;
+            padding: 10px; border-radius: 6px; min-height: 6in; position: relative;
+            align-items: stretch; justify-content: space-between;
+        }
+
+        /* Cab Indicator */
+        .cab-zone {
+            width: 40px; min-width: 40px; background: #111827; color: white; 
+            display: flex; align-items: center; justify-content: center;
+            writing-mode: vertical-rl; text-orientation: mixed;
+            font-weight: 900; font-size: 0.9rem; border-right: 2px solid #fff;
+            text-transform: uppercase; letter-spacing: 0.1em; height: 100%; z-index: 20;
+        }
+
+        /* Tail Indicator */
+        .tail-zone {
+            width: 40px; min-width: 40px; background: #111827; color: white; 
+            display: flex; align-items: center; justify-content: center;
+            writing-mode: vertical-rl; text-orientation: mixed;
+            font-weight: 900; font-size: 0.9rem; border-left: 2px solid #fff;
+            text-transform: uppercase; letter-spacing: 0.1em; height: 100%; z-index: 20;
+        }
+
+        /* Bed Area */
+        .bed-area {
+            flex-grow: 1; display: flex; flex-direction: row; position: relative; width: 100%;
+        }
+
+        /* Zones */
+        .front-zone {
+            flex: 5; display: flex; flex-direction: column; 
+            border-right: 4px dashed #9ca3af; position: relative;
+            padding: 4px; gap: 8px; justify-content: center;
+        }
+        
+        .rear-zone {
+            flex: 7; display: flex; flex-direction: column; 
+            position: relative; padding: 4px; gap: 8px; justify-content: center;
+        }
+
+        /* Frame Card */
+        .frame-card {
+            flex: 1; display: flex; flex-direction: column;
+            border: 3px solid #374151; background: white;
+            border-radius: 4px; padding: 2px; 
+            min-height: 0;
+        }
+        
+        /* Frame Header & Remove Button */
+        .frame-header {
+            background: #374151; color: white; font-weight: 900; 
+            text-align: center; font-size: 0.7rem; padding: 2px;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            position: relative;
+        }
+
+        .remove-frame-btn {
+            position: absolute; top: 0; right: 0; bottom: 0;
+            width: 20px; display: flex; align-items: center; justify-content: center;
+            background: #ef4444; color: white; cursor: pointer;
+            font-size: 0.7rem; transition: background 0.2s;
+        }
+        .remove-frame-btn:hover { background: #dc2626; }
+
+        .side-label-top, .side-label-bottom {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            font-weight: 900; color: #374151; font-size: 1rem; letter-spacing: 0.1em; z-index: 10;
+        }
+        .side-label-top { top: -25px; }
+        .side-label-bottom { bottom: -25px; }
+
+        .side-stats {
+            font-size: 0.55rem; font-weight: bold; text-align: center;
+            color: #1f2937; background: #e5e7eb; border-bottom: 1px solid #d1d5db; padding: 1px 0;
+        }
+        
+        .slab-container {
+            flex: 1; display: flex; flex-direction: column; overflow: hidden;
+            background: #f9fafb; min-height: 10px; padding: 0;
+            transition: background-color 0.2s;
+        }
+        
+        .slab-container.drag-over {
+            background-color: #dbeafe; /* Light blue highlight on hover */
+            box-shadow: inset 0 0 0 2px #2563eb;
+        }
+
+        /* STACKING LOGIC - FLUSH SPINE */
+        .stack-up { justify-content: flex-start; flex-direction: column-reverse; } 
+        .stack-down { justify-content: flex-start; flex-direction: column; } 
+
+        .badge-locator {
+            background-color: #111827; color: #ffffff; font-family: monospace;
+            font-weight: 900; padding: 0 4px; border-radius: 2px;
+            font-size: 0.55rem; border: 1px solid #000;
+        }
+
+        /* Updated Badge Style - Black Circle */
+        .badge-stop {
+            background-color: #000000; color: #ffffff; font-weight: 900;
+            width: 16px; text-align: center; border: 1px solid #000;
+            border-radius: 50%; font-size: 0.65rem; line-height: 14px;
+            height: 16px; display: inline-block;
+        }
+
+        /* Key Badge */
+        .key-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.7rem; font-weight: bold;
+            background-color: #fef08a; border: 1px solid #ca8a04;
+            color: #854d0e; padding: 2px 6px; border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        /* Notifications */
+        #notification-area {
+            position: fixed; top: 20px; right: 20px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 10px; width: 350px;
+        }
+        .alert-box {
+            padding: 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: flex-start; gap: 10px;
+            animation: slideIn 0.3s ease-out;
+            background-color: white;
+        }
+        .alert-error { background-color: #fee2e2; border-left: 6px solid #dc2626; color: #991b1b; }
+        .alert-warning { background-color: #fef3c7; border-left: 6px solid #d97706; color: #92400e; }
+        .alert-info { background-color: #dbeafe; border-left: 6px solid #2563eb; color: #1e40af; }
+        .alert-success { background-color: #d1fae5; border-left: 6px solid #10b981; color: #065f46; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        /* MODAL */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 8px; width: 400px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-open { display: flex; }
+
+        @page { size: landscape; margin: 0.15in; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; font-size: 9pt; }
+            .truck-bed { border: 4px solid #000; height: 6.5in; width: 100%; }
+            .frame-card { border: 3px solid #000; }
+            .status-inactive { background-color: #fef08a !important; -webkit-print-color-adjust: exact; }
+            .remove-frame-btn { display: none !important; }
+        }
+        
+        .drag-area { border: 2px dashed #ccc; transition: all 0.3s ease; }
+        .drag-area.active { border-color: #2563eb; background-color: #eff6ff; }
+    </style>
+</head>
+<body class="p-6 text-gray-800">
+
+    <!-- Notifications -->
+    <div id="notification-area" class="no-print"></div>
+
+    <!-- ADD SLAB MODAL -->
+    <div id="add-slab-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Add Manual Slab</h2>
+            <div class="flex flex-col gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600">Stop Number</label>
+                    <input type="number" id="manual-stop" class="border rounded w-full p-2" placeholder="e.g. 1">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600">Customer</label>
+                    <input type="text" id="manual-customer" class="border rounded w-full p-2" placeholder="e.g. New Customer">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600">Description</label>
+                    <input type="text" id="manual-desc" class="border rounded w-full p-2" placeholder="e.g. 3CM White Slab">
+                </div>
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold uppercase text-gray-600">Lot #</label>
+                        <input type="text" id="manual-lot" class="border rounded w-full p-2" placeholder="e.g. 123">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold uppercase text-gray-600">Locator</label>
+                        <input type="text" id="manual-loc" class="border rounded w-full p-2" placeholder="e.g. A-01">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 font-bold">Cancel</button>
+                    <button onclick="submitManualSlab()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold">Add to Load</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="no-print max-w-4xl mx-auto mb-6">
+    <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-truck-loading text-blue-600"></i> Aframe Builder v49.5
+            <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">Enhanced</span>
+        </h1>
+        
+        <div class="flex gap-4 mb-4 items-end">
+            <div class="flex-1">
+                <label class="block text-sm font-bold mb-1">Truck Name / ID</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" id="truck-name" type="text" placeholder="e.g. Default" onkeyup="this.value = this.value.toUpperCase();">
+                <p class="text-xs text-gray-500 mt-1">Enter Default for specific configs.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Add Slab
+                </button>
+                <button id="undo-btn" onclick="undo()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded shadow flex items-center gap-2 opacity-50" disabled>
+                    <i class="fas fa-undo"></i> Undo
+                </button>
+                <button id="redo-btn" onclick="redo()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded shadow flex items-center gap-2 opacity-50" disabled>
+                    <i class="fas fa-redo"></i> Redo
+                </button>
+            </div>
+        </div>
+            
+            <!-- FIXED UPLOAD BUTTON ZONE -->
+            <div id="drop-zone" class="drag-area rounded p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors relative">
+                <p class="text-lg font-bold text-gray-700 pointer-events-none">
+                    <i class="fas fa-cloud-upload-alt mr-2"></i> Upload NEW LOAD REPORT.csv
+                </p>
+                <!-- Input moved inside but styled to be clickable via label or JS trigger -->
+                <input type="file" id="file-input" accept=".csv" class="hidden"> 
+            </div>
+
+            <div id="error-msg" class="hidden mt-2 text-sm text-red-600 font-bold"></div>
+        </div>
+    </div>
+
+    <div id="output-container"></div>
+
+    <button onclick="window.print()" id="print-btn" class="hidden no-print fixed bottom-8 right-8 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 font-bold flex items-center gap-2 transition hover:scale-105 z-50 border-2 border-white">
+        <i class="fas fa-print"></i> Print Report
+    </button>
+
+<script>
+    // --- FULL CUSTOMER DATABASE ---
+    const CUSTOMER_DB = {
+        
+    };
+    // --- TEMPLATE SYSTEM ---
+const TEMPLATE_DB = {
+    "DEFAULT": {
+        name: "Standard Truck",
+        description: "Default 4-Frame Configuration",
+        frames: [
+            { id: 1, zone: 'rear', type: 'wood', name: "BACK RIGHT (F1)", maxWeight: 7200, maxCm: 14 },
+            { id: 2, zone: 'rear', type: 'wood', name: "BACK LEFT (F2)", maxWeight: 7200, maxCm: 14 },
+            { id: 3, zone: 'front', type: 'wood', name: "FRONT RIGHT (F3)", maxWeight: 7200, maxCm: 14 },
+            { id: 4, zone: 'front', type: 'wood', name: "FRONT LEFT (F4)", maxWeight: 7200, maxCm: 14 }
+        ]
+    },
+    "FLATBED": {
+        name: "Flatbed Truck",
+        description: "2-Frame Flatbed Configuration",
+        frames: [
+            { id: 1, zone: 'rear', type: 'wood', name: "REAR FRAME", maxWeight: 10000, maxCm: 20 },
+            { id: 2, zone: 'front', type: 'wood', name: "FRONT FRAME", maxWeight: 8000, maxCm: 18 }
+        ]
+    }
+};
+
+function saveAsTemplate() {
+    const templateName = prompt("Enter template name:", `Template_${new Date().toLocaleDateString()}`);
+    if (!templateName) return;
+    
+    const template = {
+        name: templateName,
+        description: `Saved on ${new Date().toLocaleString()}`,
+        frames: JSON.parse(JSON.stringify(APP_STATE.frames.map(f => ({
+            id: f.id,
+            zone: f.zone,
+            type: f.type,
+            name: f.name,
+            maxWeight: f.maxWeight,
+            maxCm: f.maxCm
+        }))))
+    };
+    
+    TEMPLATE_DB[templateName.toUpperCase()] = template;
+    updateTemplateSelector();
+    showNotification(`✅ Template "${templateName}" saved successfully!`, 'success');
+}
+
+function loadTemplate(templateName) {
+    const template = TEMPLATE_DB[templateName];
+    if (!template) return;
+    
+    if (confirm(`Load template "${template.name}"? This will redistribute slabs.`)) {
+        // Create new frames from template
+        const newFrames = template.frames.map(f => ({
+            ...f,
+            driver: [],
+            passenger: []
+        }));
+        
+        // Collect all slabs
+        const allSlabs = [];
+        APP_STATE.frames.forEach(frame => {
+            allSlabs.push(...frame.driver, ...frame.passenger);
+        });
+        
+        // Redistribute slabs to new frames
+        APP_STATE.frames = newFrames;
+        const redistributedFrames = distributeLoad(allSlabs, APP_STATE.truckName);
+        APP_STATE.frames = redistributedFrames;
+        
+        saveState();
+        validateLoad();
+        renderTruck();
+        showNotification(`✅ Template "${template.name}" loaded successfully!`, 'success');
+    }
+}
+
+function updateTemplateSelector() {
+    const selector = document.getElementById('template-selector');
+    if (!selector) return;
+    
+    selector.innerHTML = '<option value="">Select Template...</option>';
+    Object.keys(TEMPLATE_DB).forEach(key => {
+        const template = TEMPLATE_DB[key];
+        selector.innerHTML += `<option value="${key}">${template.name}</option>`;
+    });
+}
+
+// Add template controls to UI
+function addTemplateControls() {
+    // Add to the controls section after the existing buttons
+    const templateHtml = `
+        <div class="flex gap-2 mt-2">
+            <select id="template-selector" onchange="if(this.value) loadTemplate(this.value)" class="border rounded px-3 py-2 flex-1">
+                <option value="">Select Template...</option>
+            </select>
+            <button onclick="saveAsTemplate()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow flex items-center gap-2">
+                <i class="fas fa-save"></i> Save Template
+            </button>
+        </div>
+    `;
+    
+    // Add this to the controls container
+    const controlsContainer = document.querySelector('.no-print .bg-white');
+    const existingButtons = controlsContainer.querySelector('.flex.gap-2');
+    existingButtons.insertAdjacentHTML('afterend', templateHtml);
+    
+    updateTemplateSelector();
+}
+
+// Initialize template system when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(addTemplateControls, 100);
+});
+	
+    // --- STATE MANAGEMENT ---
+    let APP_STATE = {
+        truckName: "",
+        truckConfig: null,
+        frames: [],
+        stops: [],
+        allSlabs: [] // Store original slabs for reset
+    };
+
+    // --- DOM ELEMENTS ---
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const outputContainer = document.getElementById('output-container');
+    const errorMsg = document.getElementById('error-msg');
+    const printBtn = document.getElementById('print-btn');
+    const truckInput = document.getElementById('truck-name');
+    const notificationArea = document.getElementById('notification-area');
+
+    // --- EVENT LISTENERS (FIXED) ---
+    // Ensure Click triggers file input
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    // Ensure Change triggers handler
+    fileInput.addEventListener('change', function(e) {
+        if(e.target.files.length > 0) {
+            handleFiles(e.target.files);
+            e.target.value = ""; // IMMEDIATE RESET to allow re-upload of same file
+        }
+    });
+
+    // Drag & Drop Visuals
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    dropZone.addEventListener('dragenter', () => dropZone.classList.add('active'));
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+    dropZone.addEventListener('drop', (e) => {
+        dropZone.classList.remove('active');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    // --- CONFIG ---
+    const SLAB_WEIGHTS = {
+        '60': { '3': 900, '2': 600, '1': 300 },
+        '47': { '3': 700, '2': 460, '1': 230 },
+        '30': { '3': 450, '2': 0, '1': 0 } 
+    };
+
+    const MAX_WEIGHT_PER_SIDE_DEFAULT = 3600;
+    const MAX_CM_PER_SIDE_DEFAULT = 14;
+    const MAX_IMBALANCE_THRESHOLD = 1500; 
+
+    const TRUCK_DB = {
+        
+        "DEFAULT": {
+            name: "Standard Truck",
+            description: "Default 4-Frame Configuration",
+            frames: [
+                { id: 1, zone: 'rear', type: 'wood', name: "BACK RIGHT (F1)", maxWeight: 7200, maxCm: 14 },
+                { id: 2, zone: 'rear', type: 'wood', name: "BACK LEFT (F2)", maxWeight: 7200, maxCm: 14 },
+                { id: 3, zone: 'front', type: 'wood', name: "FRONT RIGHT (F3)", maxWeight: 7200, maxCm: 14 },
+                { id: 4, zone: 'front', type: 'wood', name: "FRONT LEFT (F4)", maxWeight: 7200, maxCm: 14 }
+            ]
+        }
+    };
+
+    // --- LOGIC ---
+    function handleFiles(files) {
+        if (files.length === 0) return;
+        const truckName = truckInput.value.trim();
+        if (!truckName) {
+            errorMsg.textContent = 'Please enter a Truck Name first.';
+            errorMsg.classList.remove('hidden');
+            truckInput.focus();
+            fileInput.value = ""; 
+            return;
+        }
+        
+        APP_STATE.truckName = truckName;
+        
+        Papa.parse(files[0], {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                if (results.errors.length > 0) {
+                    errorMsg.textContent = 'CSV Error. Check console.';
+                    errorMsg.classList.remove('hidden');
+                } else {
+                    processData(results.data, truckName);
+                }
+            }
+        });
+    }
+
+    function parseSlabSpecs(desc) {
+        const d = desc.toUpperCase();
+        let cm = 3;
+        if (d.includes('2CM')) cm = 2;
+        if (d.includes('1CM')) cm = 1;
+
+        let size = '60';
+        if (d.includes('47') || d.includes('STANDARD')) size = '47';
+        if (d.includes('30') || d.includes('HALF')) size = '30';
+
+        let weight = 0;
+        if (SLAB_WEIGHTS[size] && SLAB_WEIGHTS[size][cm]) {
+            weight = SLAB_WEIGHTS[size][cm];
+        } else {
+            if (size === '60') weight = cm * 300;
+            if (size === '47') weight = cm * 230;
+        }
+        return { cm, size, weight };
+    }
+
+    function cleanDesignName(originalDesc) {
+        let name = originalDesc;
+        name = name.replace(/3CM 60 Polished Slab/gi, "").trim();
+        name = name.replace(/3CM 60 Polished/gi, "").trim(); 
+        name = name.replace(/3CM/gi, "").replace(/60/g, "").replace(/Polished/gi, "").replace(/Slab/gi, "").trim();
+        let extras = [];
+        const upperDesc = originalDesc.toUpperCase();
+        if (upperDesc.includes("1CM")) extras.push("1CM");
+        if (upperDesc.includes("2CM")) extras.push("2CM"); 
+        const finishes = ["Matte", "Satin", "Satin Ridge", "Luxe"];
+        finishes.forEach(finish => {
+            if (upperDesc.includes(finish.toUpperCase())) {
+                extras.push(finish);
+            }
+        });
+        extras.forEach(extra => {
+             const regex = new RegExp(extra, "gi");
+             name = name.replace(regex, "").trim();
+        });
+        if (extras.length > 0) {
+            return `${name} ${extras.join(" ")}`;
+        }
+        return name;
+    }
+
+    function processData(data, truckName) {
+        outputContainer.innerHTML = '';
+        errorMsg.classList.add('hidden');
+        notificationArea.innerHTML = ''; 
+        
+        APP_STATE.stops = []; 
+        
+        let allSlabs = [];
+
+        data.forEach(row => {
+            const stopNum = parseInt(row['Stop Number'] || row['Stop'] || 0);
+            if (stopNum === 0) return;
+
+            let stopGroup = APP_STATE.stops.find(s => s.number === stopNum);
+            if (!stopGroup) {
+                stopGroup = {
+                    number: stopNum,
+                    customer: row['Customer Name'] || 'Unknown',
+                    slabs: []
+                };
+                APP_STATE.stops.push(stopGroup);
+            }
+
+            const rawDesc = row['Item Description'] || 'Slab';
+            const cleanDesc = cleanDesignName(rawDesc);
+            const specs = parseSlabSpecs(rawDesc);
+            const lotStatus = row['Lot Status'] || 'Active';
+            const isInactive = lotStatus.toUpperCase() !== 'ACTIVE';
+
+            const slabObj = {
+                id: crypto.randomUUID(), 
+                desc: cleanDesc,
+                rawDesc: rawDesc, 
+                lot: row['Lot Number'] || '',
+                locator: row['Locator'] || '',
+                specs: specs,
+                stopNumber: stopNum,
+                customer: row['Customer Name'] || 'Unknown',
+                isInactive: isInactive,
+                isManual: false 
+            };
+
+            stopGroup.slabs.push(slabObj);
+            allSlabs.push(slabObj);
+        });
+
+        // Store original for reset
+        APP_STATE.allSlabs = allSlabs;
+
+        APP_STATE.stops.sort((a, b) => b.number - a.number);
+        APP_STATE.truckConfig = Object.keys(TRUCK_DB).find(k => truckName.toUpperCase().includes(k)) || "DEFAULT";
+        APP_STATE.frames = distributeLoad(allSlabs, truckName); 
+        
+        validateLoad();
+        renderTruck();
+        printBtn.classList.remove('hidden');
+    }
+
+    // --- RESET LAYOUT LOGIC ---
+    window.resetLayout = function() {
+        if(confirm("Reset layout to default configuration? This will undo manual frame deletions.")) {
+            // Re-distribute using the saved slabs
+            const truckName = APP_STATE.truckName;
+            APP_STATE.frames = distributeLoad(APP_STATE.allSlabs, truckName);
+            validateLoad();
+            renderTruck();
+        }
+    }
+
+    // --- REMOVE FRAME LOGIC ---
+    window.removeFrame = function(id) {
+        const frame = APP_STATE.frames.find(f => f.id === id);
+        if (!frame) return;
+
+        // Prevent deletion if frame has content
+        if (frame.driver.length > 0 || frame.passenger.length > 0) {
+            alert("Frame must be empty before removing. Please move slabs to another frame or delete them first.");
+            return;
+        }
+
+        if (confirm(`Remove ${frame.name} from layout?`)) {
+            APP_STATE.frames = APP_STATE.frames.filter(f => f.id !== id);
+            renderTruck();
+        }
+    }
+
+    function distributeLoad(slabsQueue, truckName) {
+        const configKey = APP_STATE.truckConfig;
+        // Deep copy frames to avoid reference issues on reset
+        const truckConfig = JSON.parse(JSON.stringify(TRUCK_DB[configKey]));
+        
+        let frames = truckConfig.frames.map(f => ({
+            ...f,
+            driver: [],
+            passenger: []
+        }));
+
+        let backOnlySlabs = [];
+        let generalSlabs = [];
+
+        slabsQueue.forEach(slab => {
+            const profile = lookupProfile(slab.customer);
+            const special = (profile?.special || '').toLowerCase();
+            const notes = (profile?.notes || '').toLowerCase();
+            
+            if (special.includes('back') || notes.includes('back') || 
+                special.includes('rear') || notes.includes('rear')) {
+                backOnlySlabs.push(slab);
+            } else {
+                generalSlabs.push(slab);
+            }
+        });
+
+        const rearLimit = Math.min(frames.length, 2);
+        backOnlySlabs.forEach(slab => {
+            let bestFrameIndex = -1;
+            let bestSide = null;
+            
+            for (let i = 0; i < rearLimit; i++) {
+                const f = frames[i];
+                const dStats = getSideStats(f.driver);
+                const pStats = getSideStats(f.passenger);
+                
+                const driverOK = checkFit(dStats, slab, f.maxWeight, f.maxCm);
+                const passengerOK = checkFit(pStats, slab, f.maxWeight, f.maxCm);
+
+                if (driverOK && passengerOK) {
+                    if (dStats.weight <= pStats.weight) {
+                        bestFrameIndex = i; bestSide = 'driver';
+                    } else {
+                        bestFrameIndex = i; bestSide = 'passenger';
+                    }
+                    break;
+                } else if (driverOK) {
+                    bestFrameIndex = i; bestSide = 'driver';
+                    break;
+                } else if (passengerOK) {
+                    bestFrameIndex = i; bestSide = 'passenger';
+                    break;
+                }
+            }
+
+            if (bestFrameIndex !== -1) {
+                frames[bestFrameIndex][bestSide].push(slab);
+            } else {
+                if (frames.length > 0) frames[0].driver.push(slab);
+            }
+        });
+
+        generalSlabs.forEach(slab => {
+            let bestFrameIndex = -1;
+            let bestSide = null; 
+
+            for (let i = 0; i < frames.length; i++) {
+                const f = frames[i];
+                const dStats = getSideStats(f.driver);
+                const pStats = getSideStats(f.passenger);
+
+                const driverOK = checkFit(dStats, slab, f.maxWeight, f.maxCm);
+                const passengerOK = checkFit(pStats, slab, f.maxWeight, f.maxCm);
+
+                if (driverOK && passengerOK) {
+                    if (dStats.weight <= pStats.weight) {
+                        bestFrameIndex = i; bestSide = 'driver';
+                    } else {
+                        bestFrameIndex = i; bestSide = 'passenger';
+                    }
+                    break; 
+                } else if (driverOK) {
+                    bestFrameIndex = i; bestSide = 'driver';
+                    break;
+                } else if (passengerOK) {
+                    bestFrameIndex = i; bestSide = 'passenger';
+                    break;
+                }
+            }
+
+            if (bestFrameIndex !== -1) {
+                frames[bestFrameIndex][bestSide].push(slab);
+            } else {
+                if(frames.length > 0) frames[0].driver.push(slab);
+            }
+        });
+
+        return frames;
+    }
+
+    function getSideStats(stack) {
+        let weight = 0;
+        let cm = 0;
+        stack.forEach(s => { weight += s.specs.weight; cm += s.specs.cm; });
+        return { weight, cm, count: stack.length };
+    }
+
+    function checkFit(currentStats, newSlab, maxWeight = MAX_WEIGHT_PER_SIDE_DEFAULT, maxCm = MAX_CM_PER_SIDE_DEFAULT) {
+        const sideWeightLimit = maxWeight / 2;
+        if (currentStats.weight + newSlab.specs.weight > sideWeightLimit) return false;
+        if (currentStats.cm + newSlab.specs.cm > maxCm) return false;
+        if (currentStats.count + 1 > 14) return false; 
+        return true;
+    }
+    // --- UNDO/REDO SYSTEM ---
+const HISTORY = {
+    stack: [],
+    currentIndex: -1,
+    maxSize: 50
+};
+
+function saveState() {
+    // Don't save if we're in the middle of history (after undo)
+    if (HISTORY.currentIndex < HISTORY.stack.length - 1) {
+        HISTORY.stack = HISTORY.stack.slice(0, HISTORY.currentIndex + 1);
+    }
+    
+    // Deep clone the state
+    const stateSnapshot = {
+        frames: JSON.parse(JSON.stringify(APP_STATE.frames)),
+        stops: JSON.parse(JSON.stringify(APP_STATE.stops)),
+        allSlabs: JSON.parse(JSON.stringify(APP_STATE.allSlabs)),
+        truckName: APP_STATE.truckName
+    };
+    
+    HISTORY.stack.push(stateSnapshot);
+    HISTORY.currentIndex = HISTORY.stack.length - 1;
+    
+    // Limit history size
+    if (HISTORY.stack.length > HISTORY.maxSize) {
+        HISTORY.stack.shift();
+        HISTORY.currentIndex--;
+    }
+    
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (HISTORY.currentIndex > 0) {
+        HISTORY.currentIndex--;
+        const previousState = HISTORY.stack[HISTORY.currentIndex];
+        restoreState(previousState);
+    }
+}
+
+function redo() {
+    if (HISTORY.currentIndex < HISTORY.stack.length - 1) {
+        HISTORY.currentIndex++;
+        const nextState = HISTORY.stack[HISTORY.currentIndex];
+        restoreState(nextState);
+    }
+}
+
+function restoreState(state) {
+    APP_STATE.frames = JSON.parse(JSON.stringify(state.frames));
+    APP_STATE.stops = JSON.parse(JSON.stringify(state.stops));
+    APP_STATE.allSlabs = JSON.parse(JSON.stringify(state.allSlabs));
+    APP_STATE.truckName = state.truckName;
+    
+    validateLoad();
+    renderTruck();
+    updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    
+    if (undoBtn) {
+        undoBtn.disabled = HISTORY.currentIndex <= 0;
+        undoBtn.classList.toggle('opacity-50', HISTORY.currentIndex <= 0);
+    }
+    
+    if (redoBtn) {
+        redoBtn.disabled = HISTORY.currentIndex >= HISTORY.stack.length - 1;
+        redoBtn.classList.toggle('opacity-50', HISTORY.currentIndex >= HISTORY.stack.length - 1);
+    }
+}
+
+// Modify state-changing functions to save history
+function wrapWithHistory(fn) {
+    return function(...args) {
+        saveState();
+        return fn.apply(this, args);
+    };
+}
+
+// Wrap all state-changing functions
+window.onDrop = wrapWithHistory(window.onDrop);
+window.deleteSlab = wrapWithHistory(window.deleteSlab);
+window.submitManualSlab = wrapWithHistory(window.submitManualSlab);
+window.removeFrame = wrapWithHistory(window.removeFrame);
+window.resetLayout = wrapWithHistory(window.resetLayout);
+
+// Also save state after initial load
+function processData(data, truckName) {
+    // ... existing code ...
+    
+    // After distributing load
+    APP_STATE.frames = distributeLoad(allSlabs, truckName);
+    validateLoad();
+    renderTruck();
+    printBtn.classList.remove('hidden');
+    
+    // Save initial state
+    saveState();
+}
+
+// --- ENHANCED VALIDATION SYSTEM ---
+const VALIDATION_RULES = {
+    maxWeightPerSide: 3600,
+    maxCmPerSide: 14,
+    maxImbalance: 1500,
+    maxFrameWeight: 7200,
+    maxSlabsPerSide: 14
+};
+
+function validateLoad() {
+    notificationArea.innerHTML = '';
+    const messages = {
+        errors: [],
+        warnings: [],
+        info: []
+    };
+
+    APP_STATE.frames.forEach(frame => {
+        const dStats = getSideStats(frame.driver);
+        const pStats = getSideStats(frame.passenger);
+        const totalWeight = dStats.weight + pStats.weight;
+        const imbalance = Math.abs(dStats.weight - pStats.weight);
+
+        // Weight validation
+        if (totalWeight > VALIDATION_RULES.maxFrameWeight) {
+            messages.errors.push(`🚨 OVERLOAD: ${frame.name} has ${totalWeight}lbs > ${VALIDATION_RULES.maxFrameWeight}lbs limit`);
+        }
+        
+        if (dStats.weight > VALIDATION_RULES.maxWeightPerSide) {
+            messages.errors.push(`⚖️ SIDE OVERLOAD: ${frame.name} Driver side has ${dStats.weight}lbs > ${VALIDATION_RULES.maxWeightPerSide}lbs`);
+        }
+        
+        if (pStats.weight > VALIDATION_RULES.maxWeightPerSide) {
+            messages.errors.push(`⚖️ SIDE OVERLOAD: ${frame.name} Passenger side has ${pStats.weight}lbs > ${VALIDATION_RULES.maxWeightPerSide}lbs`);
+        }
+
+        // Thickness validation
+        if (dStats.cm > VALIDATION_RULES.maxCmPerSide) {
+            messages.errors.push(`📏 WIDTH EXCEEDED: ${frame.name} Driver side has ${dStats.cm}cm > ${VALIDATION_RULES.maxCmPerSide}cm limit`);
+        }
+        
+        if (pStats.cm > VALIDATION_RULES.maxCmPerSide) {
+            messages.errors.push(`📏 WIDTH EXCEEDED: ${frame.name} Passenger side has ${pStats.cm}cm > ${VALIDATION_RULES.maxCmPerSide}cm limit`);
+        }
+
+        // Imbalance validation
+        if (imbalance > VALIDATION_RULES.maxImbalance) {
+            messages.warnings.push(`⚖️ IMBALANCE: ${frame.name} has ${imbalance}lbs difference between sides (limit: ${VALIDATION_RULES.maxImbalance}lbs)`);
+        }
+
+        // Capacity warnings
+        if (dStats.count >= VALIDATION_RULES.maxSlabsPerSide - 2) {
+            messages.warnings.push(`📦 CAPACITY: ${frame.name} Driver side has ${dStats.count}/${VALIDATION_RULES.maxSlabsPerSide} slabs`);
+        }
+        
+        if (pStats.count >= VALIDATION_RULES.maxSlabsPerSide - 2) {
+            messages.warnings.push(`📦 CAPACITY: ${frame.name} Passenger side has ${pStats.count}/${VALIDATION_RULES.maxSlabsPerSide} slabs`);
+        }
+
+        // Customer restrictions
+        [...frame.driver, ...frame.passenger].forEach(slab => {
+            const profile = lookupProfile(slab.customer);
+            const special = (profile?.special || '').toLowerCase();
+            const notes = (profile?.notes || '').toLowerCase();
+            const isRestricted = special.includes('back') || notes.includes('back') || special.includes('rear');
+
+            if (isRestricted && frame.zone === 'front') {
+                messages.errors.push(`🚫 PLACEMENT VIOLATION: ${slab.customer} requires BACK frame but is on FRONT (${frame.name})`);
+            }
+
+            // Heavy slab warning
+            if (slab.specs.weight > 1000) {
+                messages.info.push(`💪 HEAVY SLAB: ${slab.desc} (${slab.specs.weight}lbs) on ${frame.name}`);
+            }
+        });
+    });
+
+    // Display organized messages
+    displayValidationMessages(messages);
+    
+    return messages.errors.length === 0;
+}
+
+function displayValidationMessages(messages) {
+    if (messages.errors.length + messages.warnings.length + messages.info.length === 0) {
+        showNotification("✅ Load validation passed - All checks OK!", "success");
+        return;
+    }
+
+    // Group messages by type
+    messages.errors.forEach(msg => showNotification(msg, 'error'));
+    messages.warnings.forEach(msg => showNotification(msg, 'warning'));
+    messages.info.forEach(msg => showNotification(msg, 'info'));
+
+    // Summary notification
+    if (messages.errors.length > 0) {
+        showNotification(`❌ ${messages.errors.length} critical issues need attention`, 'error');
+    } else if (messages.warnings.length > 0) {
+        showNotification(`⚠️ ${messages.warnings.length} warnings - review recommended`, 'warning');
+    }
+}
+
+
+// Add success notification type
+function showNotification(msg, type) {
+    const div = document.createElement('div');
+    const icons = {
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle',
+        success: 'fa-check-circle'
+    };
+    const colors = {
+        error: 'alert-error',
+        warning: 'alert-warning',
+        info: 'alert-info',
+        success: 'alert-success'
+    };
+    
+    div.className = `alert-box ${colors[type] || 'alert-info'}`;
+    div.innerHTML = `<i class="fas ${icons[type]} text-xl mt-1"></i><span>${msg}</span>`;
+    notificationArea.appendChild(div);
+    
+    setTimeout(() => {
+        div.style.opacity = '0';
+        setTimeout(() => div.remove(), 300);
+    }, type === 'error' ? 15000 : 8000);
+	}
+	}
+
+    // --- DRAG AND DROP ---
+    let draggedSlab = null;
+    let sourceFrameId = null;
+    let sourceSide = null;
+
+    window.onDragStart = function(event, frameId, side, slabId) {
+        draggedSlab = slabId;
+        sourceFrameId = frameId;
+        sourceSide = side;
+        event.dataTransfer.effectAllowed = "move";
+        const frame = APP_STATE.frames.find(f => f.id === frameId);
+        const slab = frame[side].find(s => s.id === slabId);
+        event.dataTransfer.setData("text/plain", JSON.stringify(slab));
+        setTimeout(() => event.target.classList.add('opacity-50'), 0);
+    };
+
+    window.onDragEnd = function(event) {
+        event.target.classList.remove('opacity-50');
+        draggedSlab = null;
+        document.querySelectorAll('.slab-container').forEach(el => el.classList.remove('drag-over'));
+    };
+
+    window.onDragOver = function(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        const container = event.target.closest('.slab-container');
+        if (container) container.classList.add('drag-over');
+    };
+
+    window.onDragLeave = function(event) {
+        const container = event.target.closest('.slab-container');
+        if (container) container.classList.remove('drag-over');
+    };
+
+    window.onDrop = function(event, targetFrameId, targetSide) {
+        event.preventDefault();
+        const container = event.target.closest('.slab-container');
+        if (container) container.classList.remove('drag-over');
+
+        if (!draggedSlab) return;
+
+        const srcFrame = APP_STATE.frames.find(f => f.id === sourceFrameId);
+        const slabIndex = srcFrame[sourceSide].findIndex(s => s.id === draggedSlab);
+        if (slabIndex === -1) return;
+        
+        const [movedSlab] = srcFrame[sourceSide].splice(slabIndex, 1);
+
+        const tgtFrame = APP_STATE.frames.find(f => f.id === targetFrameId);
+        tgtFrame[targetSide].push(movedSlab);
+
+        validateLoad();
+        renderTruck();
+    };
+
+    // --- MANUAL ADD / DELETE ---
+    function openModal() {
+        document.getElementById('add-slab-modal').classList.add('modal-open');
+    }
+
+    function closeModal() {
+        document.getElementById('add-slab-modal').classList.remove('modal-open');
+        ['manual-stop', 'manual-customer', 'manual-desc', 'manual-lot', 'manual-loc'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    function deleteSlab(frameId, side, slabId) {
+        const frame = APP_STATE.frames.find(f => f.id === frameId);
+        const slabIndex = frame[side].findIndex(s => s.id === slabId);
+        if (slabIndex > -1) {
+            const slab = frame[side][slabIndex];
+            if (!slab.isManual) {
+                alert("Cannot delete slabs from CSV.");
+                return;
+            }
+            
+            frame[side].splice(slabIndex, 1);
+            
+            const stopGroup = APP_STATE.stops.find(s => s.number === slab.stopNumber);
+            if (stopGroup) {
+                stopGroup.slabs = stopGroup.slabs.filter(s => s.id !== slab.id);
+                if (stopGroup.slabs.length === 0) {
+                    APP_STATE.stops = APP_STATE.stops.filter(s => s.number !== slab.stopNumber);
+                }
+            }
+
+            validateLoad();
+            renderTruck();
+        }
+    }
+
+    function submitManualSlab() {
+        const stopNum = parseInt(document.getElementById('manual-stop').value) || 0;
+        const customer = document.getElementById('manual-customer').value || "Unknown";
+        const rawDesc = document.getElementById('manual-desc').value || "Slab";
+        const lot = document.getElementById('manual-lot').value || "";
+        const locator = document.getElementById('manual-loc').value || "";
+
+        if (stopNum <= 0) { alert("Please enter a valid stop number."); return; }
+
+        const cleanDesc = cleanDesignName(rawDesc);
+        const specs = parseSlabSpecs(rawDesc);
+        
+        const newSlab = {
+            id: crypto.randomUUID(),
+            desc: cleanDesc,
+            rawDesc: rawDesc,
+            lot: lot,
+            locator: locator,
+            specs: specs,
+            stopNumber: stopNum,
+            customer: customer,
+            isInactive: false,
+            isManual: true 
+        };
+
+        // Stop Insertion Logic
+        let existingStop = APP_STATE.stops.find(s => s.number === stopNum);
+        let isInsertion = false;
+
+        if (existingStop) {
+            const existingName = existingStop.customer.toLowerCase().trim();
+            const newName = customer.toLowerCase().trim();
+            if (!existingName.includes(newName) && !newName.includes(existingName)) {
+                isInsertion = true;
+            }
+        }
+
+        if (isInsertion) {
+            APP_STATE.stops.forEach(s => {
+                if (s.number >= stopNum) {
+                    s.number += 1;
+                    s.slabs.forEach(sl => sl.stopNumber += 1);
+                }
+            });
+            APP_STATE.stops.push({
+                number: stopNum,
+                customer: customer,
+                slabs: [newSlab]
+            });
+            showNotification(`Inserted Stop #${stopNum}. Subsequent stops shifted.`, 'warning');
+        } else {
+            if (existingStop) {
+                existingStop.slabs.push(newSlab);
+            } else {
+                APP_STATE.stops.push({
+                    number: stopNum,
+                    customer: customer,
+                    slabs: [newSlab]
+                });
+            }
+        }
+
+        APP_STATE.stops.sort((a, b) => b.number - a.number);
+
+        // Greedy Add
+        const profile = lookupProfile(customer);
+        const special = (profile?.special || '').toLowerCase();
+        const notes = (profile?.notes || '').toLowerCase();
+        const isBackOnly = special.includes('back') || notes.includes('back') || special.includes('rear');
+
+        let targetFramesIndices = [0, 1, 2, 3];
+        if (isBackOnly) targetFramesIndices = [0, 1]; 
+
+        let inserted = false;
+        for (let i of targetFramesIndices) {
+            if (i >= APP_STATE.frames.length) continue;
+            const f = APP_STATE.frames[i];
+            const dStats = getSideStats(f.driver);
+            const pStats = getSideStats(f.passenger);
+            
+            const driverOK = checkFit(dStats, newSlab, f.maxWeight, f.maxCm);
+            const passengerOK = checkFit(pStats, newSlab, f.maxWeight, f.maxCm);
+
+            if (driverOK && passengerOK) {
+                if (dStats.weight <= pStats.weight) f.driver.push(newSlab);
+                else f.passenger.push(newSlab);
+                inserted = true; break;
+            } else if (driverOK) {
+                f.driver.push(newSlab);
+                inserted = true; break;
+            } else if (passengerOK) {
+                f.passenger.push(newSlab);
+                inserted = true; break;
+            }
+        }
+
+        if (!inserted) {
+            if (APP_STATE.frames.length > 0) {
+                APP_STATE.frames[0].driver.push(newSlab);
+                showNotification("Slab forced into Frame 1 (Truck Full)", "error");
+            }
+        }
+
+        closeModal();
+        validateLoad();
+        renderTruck();
+    }
+
+    // --- VALIDATION & NOTIFICATIONS ---
+    function showNotification(msg, type) {
+        const div = document.createElement('div');
+        div.className = `alert-box ${type === 'error' ? 'alert-error' : 'alert-warning'}`;
+        div.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle'} text-xl mt-1"></i><span>${msg}</span>`;
+        notificationArea.appendChild(div);
+        setTimeout(() => {
+            div.style.opacity = '0';
+            setTimeout(() => div.remove(), 300);
+        }, 8000);
+    }
+
+    function validateLoad() {
+        notificationArea.innerHTML = ''; 
+        APP_STATE.frames.forEach(frame => {
+            const dStats = getSideStats(frame.driver);
+            const pStats = getSideStats(frame.passenger);
+            const totalWeight = dStats.weight + pStats.weight;
+            const maxFrameWeight = frame.maxWeight || 7200;
+            const maxSideCm = frame.maxCm || 14;
+
+            if (totalWeight > maxFrameWeight) {
+                showNotification(`Frame ${frame.name} OVERLOADED! ${totalWeight}lbs > ${maxFrameWeight}lbs limit.`, 'error');
+            }
+            if (dStats.cm > maxSideCm) showNotification(`Frame ${frame.name} (Driver) Width Exceeded! ${dStats.cm}cm > ${maxSideCm}cm.`, 'error');
+            if (pStats.cm > maxSideCm) showNotification(`Frame ${frame.name} (Pass) Width Exceeded! ${pStats.cm}cm > ${maxSideCm}cm.`, 'error');
+
+            const diff = Math.abs(dStats.weight - pStats.weight);
+            if (diff > MAX_IMBALANCE_THRESHOLD) {
+                showNotification(`Frame ${frame.name} Imbalanced! ${diff}lbs difference > ${MAX_IMBALANCE_THRESHOLD}lbs limit.`, 'warning');
+            }
+
+            [...frame.driver, ...frame.passenger].forEach(slab => {
+                const profile = lookupProfile(slab.customer);
+                const special = (profile?.special || '').toLowerCase();
+                const notes = (profile?.notes || '').toLowerCase();
+                const isRestricted = special.includes('back') || notes.includes('back') || special.includes('rear');
+
+                if (isRestricted && frame.zone === 'front') {
+                    showNotification(`RESTRICTION: ${slab.customer} is on FRONT frame but requires BACK/REAR.`, 'error');
+                }
+            });
+        });
+    }
+
+    function renderTruck() {
+        const truckName = APP_STATE.truckName;
+        const aFrames = APP_STATE.frames;
+        const stopsArr = APP_STATE.stops;
+        
+        let totalSlabs = 0;
+        aFrames.forEach(f => totalSlabs += (f.driver.length + f.passenger.length));
+
+        const rearFrames = aFrames.filter(f => f.zone === 'rear');
+        const frontFrames = aFrames.filter(f => f.zone === 'front');
+
+        let html = `
+            <div class="truck-card bg-white mx-auto p-4 relative h-full flex flex-col">
+                <div class="flex justify-between items-center border-b-4 border-gray-800 pb-4 mb-4">
+                    <div>
+                        <h1 class="text-3xl font-black text-gray-900 uppercase tracking-tight">Truck: ${truckName}</h1>
+                        <div class="text-sm font-bold text-gray-600">Date: ${new Date().toLocaleDateString()}</div>
+                    </div>
+                    <div class="flex items-center gap-4 text-right">
+                        <div class="key-badge">Fab Only</div>
+                        <div class="text-2xl font-black">${totalSlabs} Slabs</div>
+                        <div class="text-sm font-bold text-blue-800 bg-blue-100 px-3 py-1 rounded border border-blue-300">${aFrames.length} Frames Config</div>
+                        <button onclick="resetLayout()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded text-xs flex items-center gap-1 no-print">
+                            <i class="fas fa-undo"></i> Reset Layout
+                        </button>
+                    </div>
+                </div>
+
+                <div class="truck-bed">
+                    <div class="cab-zone">FRONT (CAB)</div>
+                    
+                    <div class="bed-area">
+                        
+                        <div class="side-label-top">PASSENGER SIDE</div>
+                        <div class="side-label-bottom">DRIVER SIDE</div>
+                        
+                        <!-- FRONT ZONE (Left) -->
+                        <div class="front-zone">
+                            <div class="zone-bg-label">FRONT</div>
+                             ${frontFrames.length === 0 ? '<div class="m-auto text-gray-300 font-bold text-xl z-10">EMPTY ZONE</div>' : ''}
+                             ${frontFrames.map(frame => renderFrameCard(frame)).join('')}
+                        </div>
+
+                        <!-- REAR ZONE (Right) -->
+                        <div class="rear-zone">
+                            <div class="zone-bg-label">REAR</div>
+                             ${rearFrames.length === 0 ? '<div class="m-auto text-gray-300 font-bold text-xl z-10">EMPTY ZONE</div>' : ''}
+                             ${rearFrames.map(frame => renderFrameCard(frame)).join('')}
+                        </div>
+
+                    </div>
+
+                    <div class="tail-zone">REAR (TAIL)</div>
+                </div>
+
+                <div class="mt-8">
+                    <table class="w-full text-xs border-collapse manifest-table border-2 border-black">
+                        <thead>
+                            <tr class="bg-black text-white text-left">
+                                <th class="p-2 w-10 text-center border-r border-white">#</th>
+                                <th class="p-2 border-r border-white">Customer</th>
+                                <th class="p-2 w-12 text-center border-r border-white">Qty</th>
+                                <th class="p-2">Notes / Restrictions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${stopsArr.map(stop => {
+                                const profile = lookupProfile(stop.customer);
+                                const notes = profile ? profile.notes : "";
+                                const contact = profile ? profile.contact : "";
+                                const special = (profile?.special || '').toLowerCase();
+                                const isHeavy = special.includes('call') || special.includes('back') || special.includes('outside') || special.includes('gate') || notes.toLowerCase().includes('back');
+                                return `
+                                    <tr class="border-b border-black ${isHeavy ? 'bg-red-50' : ''}">
+                                        <td class="p-2 text-center font-black border-r border-black text-sm">${stop.number}</td>
+                                        <td class="p-2 font-bold border-r border-black uppercase text-xs">${stop.customer}</td>
+                                        <td class="p-2 text-center font-black border-r border-black text-sm">${stop.slabs.length}</td>
+                                        <td class="p-2 font-bold text-xs">
+                                            <span class="${isHeavy ? 'text-red-700' : 'text-gray-800'}">${notes}</span>
+                                            <span class="ml-2 text-gray-600">${contact}</span>
+                                        </td>
+                                    </tr>
+                                    `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        outputContainer.innerHTML = html;
+    }
+
+    function renderFrameCard(frame) {
+        const sortSlabs = (a, b) => b.stopNumber - a.stopNumber;
+        const driverSlabs = frame.driver.slice().sort(sortSlabs);
+        const passSlabs = frame.passenger.slice().sort(sortSlabs);
+
+        const dStats = getSideStats(frame.driver);
+        const pStats = getSideStats(frame.passenger);
+        
+        return `
+            <div class="frame-card">
+                <div class="frame-header">
+                    ${frame.name}
+                    <div class="remove-frame-btn" onclick="removeFrame(${frame.id})" title="Remove Frame (Must be empty)">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+                
+                <!-- PASSENGER SIDE (Top) -->
+                <div class="side-stats">R: ${pStats.weight}lbs</div>
+                <div class="slab-container stack-up border-b-2 border-black"
+                     ondragover="onDragOver(event)" 
+                     ondrop="onDrop(event, ${frame.id}, 'passenger')"
+                     ondragleave="onDragLeave(event)">
+                    ${passSlabs.map(slab => renderSlabBar(slab, frame.id, 'passenger')).join('')}
+                </div>
+
+                <!-- SPINE -->
+                <div class="a-frame-spine">SPINE</div>
+
+                <!-- DRIVER SIDE (Bottom) -->
+                <div class="slab-container stack-down"
+                     ondragover="onDragOver(event)" 
+                     ondrop="onDrop(event, ${frame.id}, 'driver')"
+                     ondragleave="onDragLeave(event)">
+                    ${driverSlabs.map(slab => renderSlabBar(slab, frame.id, 'driver')).join('')}
+                </div>
+                <div class="side-stats">L: ${dStats.weight}lbs</div>
+            </div>
+        `;
+    }
+
+    function renderSlabBar(slab, frameId, side) {
+        let bgClass = ''; 
+        if (slab.isInactive) bgClass = 'status-inactive'; 
+
+        const lotDisplay = slab.lot.length > 3 ? slab.lot.slice(-3) : slab.lot;
+        const tooltip = `${slab.rawDesc} | Status: ${slab.isInactive ? 'INACTIVE' : 'Active'}`;
+
+        const deleteBtnHtml = slab.isManual 
+            ? `<div class="delete-btn" onclick="deleteSlab(${frameId}, '${side}', '${slab.id}')" title="Delete Slab"><i class="fas fa-times"></i></div>`
+            : '';
+
+        return `
+            <div class="slab-bar ${bgClass} hover:bg-white" title="${tooltip}"
+                 draggable="true"
+                 ondragstart="onDragStart(event, ${frameId}, '${side}', '${slab.id}')"
+                 ondragend="onDragEnd(event)">
+                <div class="flex items-center w-1/3 overflow-hidden gap-1 pointer-events-none">
+                    <span class="badge-stop">${slab.stopNumber}</span>
+                    <span class="badge-locator ml-1">${slab.locator}</span>
+                </div>
+                <div class="flex-1 text-center truncate font-black px-1 text-black text-[0.65rem] uppercase tracking-tight pointer-events-none">${slab.desc}</div>
+                <div class="flex items-center justify-end w-1/6 gap-1 pointer-events-none">
+                    <span class="text-black font-bold font-mono text-[0.65rem]">..${lotDisplay}</span>
+                </div>
+                ${deleteBtnHtml}
+            </div>
+        `;
+    }
+
+    function lookupProfile(name) {
+        if (!name) return null;
+        const n = name.toLowerCase().trim();
+        
+        if (CUSTOMER_DB[n]) return CUSTOMER_DB[n];
+
+        for(let key in CUSTOMER_DB) {
+            if (n.includes(key) || key.includes(n)) return CUSTOMER_DB[key];
+        }
+        return null;
+    }
+</script>
+</body>
+</html>
