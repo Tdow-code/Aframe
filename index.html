@@ -247,7 +247,7 @@
     <div class="no-print max-w-4xl mx-auto mb-6">
         <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
             <h1 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <i class="fas fa-truck-loading text-blue-600"></i> Aframe Builder v49.4
+                <i class="fas fa-truck-fast text-blue-600"></i> Aframe Builder v49.4
             </h1>
             <div class="flex gap-4 mb-4 items-end">
                 <div class="flex-1">
@@ -259,7 +259,7 @@
                 </div>
                 <div>
                     <button onclick="openModal()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow flex items-center gap-2">
-                        <i class="fas fa-plus"></i> Add Slab
+                        <i class="fas fa-cube"></i> Add Slab
                     </button>
                 </div>
             </div>
@@ -287,7 +287,7 @@
             <!-- LOAD REPORT UPLOAD -->
             <div id="drop-zone" class="drag-area rounded p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors relative">
                 <p class="text-lg font-bold text-gray-700 pointer-events-none">
-                    <i class="fas fa-cloud-upload-alt mr-2"></i> Upload NEW LOAD REPORT.csv
+                    <i class="fas fa-cloud-arrow-up mr-2"></i> Upload NEW LOAD REPORT.csv
                 </p>
                 <!-- Input moved inside but styled to be clickable via label or JS trigger -->
                 <input type="file" id="file-input" accept=".csv,text/csv,application/vnd.ms-excel" class="hidden"> 
@@ -1122,7 +1122,7 @@
     function showNotification(msg, type) {
         const div = document.createElement('div');
         div.className = `alert-box ${type === 'error' ? 'alert-error' : 'alert-warning'}`;
-        div.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle'} text-xl mt-1"></i><span>${msg}</span>`;
+        div.innerHTML = `<i class="fas ${type === 'error' ? 'fa-circle-exclamation' : 'fa-triangle-exclamation'} text-xl mt-1"></i><span>${msg}</span>`;
         notificationArea.appendChild(div);
         setTimeout(() => {
             div.style.opacity = '0';
@@ -1189,7 +1189,7 @@
                         <div class="text-2xl font-black">${totalSlabs} Slabs</div>
                         <div class="text-sm font-bold text-blue-800 bg-blue-100 px-3 py-1 rounded border border-blue-300">${aFrames.length} Frames Config</div>
                         <button onclick="resetLayout()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded text-xs flex items-center gap-1 no-print">
-                            <i class="fas fa-undo"></i> Reset Layout
+                            <i class="fas fa-rotate-left"></i> Reset Layout
                         </button>
                     </div>
                 </div>
@@ -1272,7 +1272,7 @@
                 <div class="frame-header">
                     ${frame.name}
                     <div class="remove-frame-btn" onclick="removeFrame(${frame.id})" title="Remove Frame (Must be empty)">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-trash-can"></i>
                     </div>
                 </div>
                 
@@ -1308,7 +1308,7 @@
         const tooltip = `${slab.rawDesc} | Status: ${slab.isInactive ? 'INACTIVE' : 'Active'}`;
 
         const deleteBtnHtml = slab.isManual 
-            ? `<div class="delete-btn" onclick="deleteSlab(${frameId}, '${side}', '${slab.id}')" title="Delete Slab"><i class="fas fa-times"></i></div>`
+            ? `<div class="delete-btn" onclick="deleteSlab(${frameId}, '${side}', '${slab.id}')" title="Delete Slab"><i class="fas fa-trash-can"></i></div>`
             : '';
 
         return `
