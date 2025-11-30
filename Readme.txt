@@ -1,19 +1,132 @@
-A-Frame Builder v49.4 A web-based tool for planning and visualizing the loading of stone slabs onto A-frame trucks with intelligent distribution, drag-and-drop rearrangement, and comprehensive validation.
+A-Frame Builder v49.5
 
-Overview This application helps logistics teams optimize truck loading by
+A web-based tool for planning and visualizing the loading of stone slabs onto A-frame trucks with intelligent distribution, drag-and-drop rearrangement, and comprehensive validation.
 
-Automatically distributing slabs across A-frame racks based on weight and constraints Providing visual drag-and-drop interface for manual adjustments Validating load safety (weight limits, balance, customer restrictions) Generating printable loading manifests with customer stop information Features Core Functionality CSV Import Process load reports with stop numbers, customer info, and slab details Intelligent Distribution Automatically assigns slabs to frames considering Weight limits (per side and total) Thickness constraints (CM limits) Customer restrictions (back-only requirements) Load balancing between driverpassenger sides Interactive Controls Drag & Drop Move slabs between frames and sides Manual Slab Addition Add custom slabs with stop insertionrenumbering Frame Management Remove empty frames from layout Layout Reset Restore original automated distribution Validation & Safety Real-time Alerts Notifications for overloads, imbalances, and placement violations Customer Restrictions Enforces backfront placement requirements Weight Calculations Automatic weight estimation based on slab size and thickness Output Visual Truck Layout Color-coded representation of loaded frames Printable Manifest Stop-by-stop customer summary with notes Side Statistics Weight totals for each frame side Quick Start Open the application Load Aframe Builder Default.html in a web browser Enter Truck Name Use DEFAULT for standard 4-frame configuration Upload CSV Click upload zone and select a properly formatted load report Review & Adjust Drag slabs between frames as needed Add manual slabs using the + Add Slab button Check for validation warnings (displayed in top-right) Print Use the print button for a formatted loading report CSV Format Requirements Your load report CSV must include these columns
+Overview
+This application helps logistics teams optimize truck loading by
 
-Stop Number or Stop - Delivery sequence (higher numbers = first stops) Customer Name - Customer identification Item Description - Slab description (used for sizeweight calculation) Lot Number - Slab inventory identifier Locator - Warehouse location code Lot Status - Active or Inactive status Slab Description Parsing The system automatically detects
+Automatically distributing slabs across A-frame racks based on weight and constraints
 
-Sizes 60 (standard), 47 (standard), 30 (half) Thickness 3CM, 2CM, 1CM Design Extracted from description (removes sizethickness text) Example 3CM 60 Polished Slab Calacatta Gold → Design Calacatta Gold
+Providing visual drag-and-drop interface for manual adjustments
 
-Manual Slab Addition Use the Add Slab button to insert custom slabs
+Validating load safety (weight limits, balance, customer restrictions, slab stacking rules)
 
-Stop Insertion Adding a slab to an existing stop number inserts a new stop and renumbers subsequent stops Customer Matching Slabs added to existing customer stops maintain stop numbering Automatic Placement System attempts to place manual slabs following the same distribution rules Truck Configurations Default Configuration (4 frames) F1 Back Right (Rear zone) F2 Back Left (Rear zone) F3 Front Right (Front zone) F4 Front Left (Front zone) Custom Configurations Modify the TRUCK_DB object in the code to add custom truck layouts with different frame arrangements and weight limits.
+Generating printable loading manifests with customer stop information
 
-Safety Limits Max Weight per Side 3,600 lbs (default) Max Thickness per Side 14CM (default) Max Imbalance 1,500 lbs difference between sides (default) Metal Aframe Truck: 4,500 lbs difference between sides Customer Restrictions Back-only customers cannot be placed on front frames Keyboard Shortcuts Print Browser print shortcut (Ctrl+P) or on-screen print button Reset Reset Layout button to restore automated distribution Drag & Drop Click and drag slabs between frames Browser Compatibility Chrome (recommended) Firefox Safari Edge Note Requires modern browser with ES6+ support and dragdrop API
+Features
+Core Functionality
 
-Technical Details Libraries Used Tailwind CSS - Styling and layout PapaParse - CSV processing Font Awesome - Icons Google Fonts - Typography (Roboto) Data Persistence All data exists in browser memory (no server storage) Refreshclose browser to clear current load Print or save PDF for permanent records Troubleshooting Common Issues CSV won't upload Check column headers match expected format Slabs not distributing Verify stop numbers are numeric and  0 Dragdrop not working Ensure you're dragging the entire slab bar, not just text Print layout broken Use the print button rather than browser print for optimized formatting Validation Errors OVERLOADED Total frame weight exceeds safe limit Width Exceeded Too many CM on one side of frame Imbalanced Weight difference between sides exceeds threshold (1,500 lbs default, 4,500 lbs for Metal Aframe Truck) Restriction Violation Back-only customer placed on front frame Version History v49.4 (Current)
+CSV Import: Process load reports with stop numbers, customer info, and slab details.
 
-Added manual slab deletion capability Enhanced dragdrop visual feedback Improved print formatting Fixed stop insertion logic Previous versions included foundational distribution algorithm, CSV processing, and basic UI.
+Intelligent Distribution: Automatically assigns slabs to frames considering:
+
+Weight limits (per side and total)
+
+Thickness constraints (CM limits)
+
+Customer restrictions (back-only requirements)
+
+Slab Stacking Rules (47" restriction)
+
+Load Balancing: Balances load between driver/passenger sides.
+
+Interactive Controls
+
+Drag & Drop: Move slabs between frames and sides.
+
+Manual Slab Addition: Add custom slabs with stop insertion/renumbering.
+
+Frame Management: Remove empty frames from layout.
+
+Layout Reset: Restore original automated distribution.
+
+Validation & Safety
+
+Real-time Alerts: Notifications for overloads, imbalances, and placement violations.
+
+Customer Restrictions: Enforces back/front placement requirements.
+
+Weight Calculations: Automatic weight estimation based on slab size and thickness.
+
+NEW: Slab Height Restriction: Alerts if a tall slab (e.g., > 47 inches) is placed on top of a restricted 47-inch slab.
+
+Output
+
+Visual Truck Layout: Color-coded representation of loaded frames.
+
+Printable Manifest: Generates a clean, organized printout with all customer and slab details.
+
+Usability
+Layout
+
+Frames are arranged vertically, with driver and passenger sides clearly labeled.
+
+Slabs display Stop Number, Locator, Description, and Lot information.
+
+Keyboard Shortcuts
+
+Print: Browser print shortcut (Ctrl+P) or on-screen print button
+
+Reset: Reset Layout button to restore automated distribution
+
+Drag & Drop: Click and drag slabs between frames
+
+Browser Compatibility
+
+Chrome (recommended)
+
+Firefox
+
+Safari
+
+Edge
+
+Note: Requires modern browser with ES6+ support and drag/drop API.
+
+Technical Details
+
+Libraries Used: Tailwind CSS, PapaParse, Font Awesome, Google Fonts (Roboto).
+
+Data Persistence: All data exists in browser memory (no server storage). Refresh/close browser to clear current load. Print or save PDF for permanent records.
+
+Troubleshooting Common Issues
+
+CSV won't upload: Check column headers match expected format.
+
+Slabs not distributing: Verify stop numbers are numeric and > 0.
+
+Drag/drop not working: Ensure you're dragging the entire slab bar, not just text.
+
+Print layout broken: Use the print button rather than browser print for optimized formatting.
+
+Validation Errors
+
+OVERLOADED: Total frame weight exceeds safe limit.
+
+Width Exceeded: Too many CM on one side of frame.
+
+Imbalanced: Weight difference between sides exceeds threshold (1,500 lbs default, 4,500 lbs for Metal Aframe Truck).
+
+Restriction Violation: Back-only customer placed on front frame.
+
+47" SLAB VIOLATION (NEW): Slabs taller than 47 inches cannot be stacked on top of a 47-inch slab.
+
+Version History
+
+v49.5 (Current)
+
+Added 47" Slab Height Restriction: Implements a safety rule to prevent placing slabs taller than 47 inches on top of a 47-inch base slab.
+
+Visual Enhancement: 47-inch slabs are now highlighted in light green with a badge for easy identification.
+
+v49.4 (Previous)
+
+Added manual slab deletion capability.
+
+Enhanced drag/drop visual feedback.
+
+Improved print formatting.
+
+Fixed stop insertion logic.
+
+Previous versions included foundational distribution algorithm, CSV processing, and basic UI.

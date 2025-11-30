@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aframe Builder - v49.4 (Delete Frame)</title>
+    <title>Aframe Builder - v49.7 (SqFt Fixed)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -13,6 +13,12 @@
 
         /* Status Highlight */
         .status-inactive { background-color: #fef08a !important; border-left: 6px solid #ca8a04 !important; } 
+
+        /* 47-sqft Slab Highlight (NOW LIGHT GREEN) */
+        .status-47sqft {
+            background-color: #dcfce7 !important; /* light green-100 */ 
+            border-left: 6px solid #22c55e !important; /* green-500 border */
+        }
 
         /* Standard Slab Bar */
         .slab-bar {
@@ -247,7 +253,7 @@
     <div class="no-print max-w-4xl mx-auto mb-6">
         <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
             <h1 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <i class="fas fa-truck-fast text-blue-600"></i> Aframe Builder v49.4
+                <i class="fas fa-truck-fast text-blue-600"></i> Aframe Builder v49.7
             </h1>
             <div class="flex gap-4 mb-4 items-end">
                 <div class="flex-1">
@@ -587,7 +593,7 @@
             const key = customerName.toLowerCase().trim();
             
             // Get other fields with flexible column name matching
-            const special = row['Special'] || row['Special Instructions'] || row['Restrictions'] || row['Restriction'] || '';
+            const special = row['Special'] || row['Special Instructions'] || row['Access'] || row['Restriction'] || '';
             const notes = row['Notes'] || row['Note'] || row['Description'] || '';
             const contact = row['Contact'] || row['Phone'] || row['Phone Number'] || row['Contact Info'] || '';
             
@@ -849,8 +855,9 @@
                 const dStats = getSideStats(f.driver);
                 const pStats = getSideStats(f.passenger);
                 
-                const driverOK = checkFit(dStats, slab, f.maxWeight, f.maxCm);
-                const passengerOK = checkFit(pStats, slab, f.maxWeight, f.maxCm);
+                // NEW: Pass existing slabs to checkFit
+                const driverOK = checkFit(dStats, slab, f.maxWeight, f.maxCm, f.driver);
+                const passengerOK = checkFit(pStats, slab, f.maxWeight, f.maxCm, f.passenger);
 
                 if (driverOK && passengerOK) {
                     if (dStats.weight <= pStats.weight) {
@@ -884,8 +891,9 @@
                 const dStats = getSideStats(f.driver);
                 const pStats = getSideStats(f.passenger);
 
-                const driverOK = checkFit(dStats, slab, f.maxWeight, f.maxCm);
-                const passengerOK = checkFit(pStats, slab, f.maxWeight, f.maxCm);
+                // NEW: Pass existing slabs to checkFit
+                const driverOK = checkFit(dStats, slab, f.maxWeight, f.maxCm, f.driver);
+                const passengerOK = checkFit(pStats, slab, f.maxWeight, f.maxCm, f.passenger);
 
                 if (driverOK && passengerOK) {
                     if (dStats.weight <= pStats.weight) {
@@ -920,11 +928,22 @@
         return { weight, cm, count: stack.length };
     }
 
-    function checkFit(currentStats, newSlab, maxWeight = MAX_WEIGHT_PER_SIDE_DEFAULT, maxCm = MAX_CM_PER_SIDE_DEFAULT) {
+    // NEW: Updated checkFit function with existingSlabs check
+    function checkFit(currentStats, newSlab, maxWeight = MAX_WEIGHT_PER_SIDE_DEFAULT, maxCm = MAX_CM_PER_SIDE_DEFAULT, existingSlabs = []) {
         const sideWeightLimit = maxWeight / 2;
         if (currentStats.weight + newSlab.specs.weight > sideWeightLimit) return false;
         if (currentStats.cm + newSlab.specs.cm > maxCm) return false;
         if (currentStats.count + 1 > 14) return false; 
+        
+        // NEW: Check 47-sqft slab stacking restriction
+        if (newSlab.specs.size === '60') {  // If trying to place 60-sqft slab
+            // Check if any 47-sqft slabs exist in the stack
+            const has47Slabs = existingSlabs.some(slab => slab.specs.size === '47');
+            if (has47Slabs) {
+                return false; // Cannot place 60-sqft on top of 47-sqft
+            }
+        }
+        
         return true;
     }
 
@@ -976,7 +995,17 @@
         const [movedSlab] = srcFrame[sourceSide].splice(slabIndex, 1);
 
         const tgtFrame = APP_STATE.frames.find(f => f.id === targetFrameId);
-        tgtFrame[targetSide].push(movedSlab);
+        
+        // Re-check fit after removing from source (since the entire stack changes)
+        const targetStats = getSideStats(tgtFrame[targetSide]);
+        if (!checkFit(targetStats, movedSlab, tgtFrame.maxWeight, tgtFrame.maxCm, tgtFrame[targetSide])) {
+            // Revert move if it violates rules
+            srcFrame[sourceSide].splice(slabIndex, 0, movedSlab); // Put it back
+            showNotification(`Cannot place 60-sqft slab here. Rule violation: A 60-sqft slab cannot be placed on top of a 47-sqft slab.`, 'error');
+        } else {
+            // Commit move
+            tgtFrame[targetSide].push(movedSlab);
+        }
 
         validateLoad();
         renderTruck();
@@ -1012,6 +1041,9 @@
                 }
             }
 
+            // Also remove from allSlabs to prevent reappearing on reset
+            APP_STATE.allSlabs = APP_STATE.allSlabs.filter(s => s.id !== slabId);
+
             validateLoad();
             renderTruck();
         }
@@ -1041,6 +1073,9 @@
             isInactive: false,
             isManual: true 
         };
+
+        // Add to global store so it persists on reset
+        APP_STATE.allSlabs.push(newSlab);
 
         // Stop Insertion Logic
         let existingStop = APP_STATE.stops.find(s => s.number === stopNum);
@@ -1097,8 +1132,9 @@
             const dStats = getSideStats(f.driver);
             const pStats = getSideStats(f.passenger);
             
-            const driverOK = checkFit(dStats, newSlab, f.maxWeight, f.maxCm);
-            const passengerOK = checkFit(pStats, newSlab, f.maxWeight, f.maxCm);
+            // NEW: Pass existing slabs to checkFit
+            const driverOK = checkFit(dStats, newSlab, f.maxWeight, f.maxCm, f.driver);
+            const passengerOK = checkFit(pStats, newSlab, f.maxWeight, f.maxCm, f.passenger);
 
             if (driverOK && passengerOK) {
                 if (dStats.weight <= pStats.weight) f.driver.push(newSlab);
@@ -1163,6 +1199,10 @@
                 showNotification(`Frame ${frame.name} Imbalanced! ${diff}lbs difference > ${imbalanceThreshold}lbs limit.`, 'warning');
             }
 
+            // NEW: Check for invalid 47-sqft slab stacking
+            check47SqftStackingViolations(frame, 'driver');
+            check47SqftStackingViolations(frame, 'passenger');
+
             [...frame.driver, ...frame.passenger].forEach(slab => {
                 const profile = lookupProfile(slab.customer);
                 const special = (profile?.special || '').toLowerCase();
@@ -1174,6 +1214,28 @@
                 }
             });
         });
+    }
+
+    // NEW: Function to check 47-sqft stacking violations
+    function check47SqftStackingViolations(frame, side) {
+        const slabs = frame[side];
+        const has47Slab = slabs.some(slab => slab.specs.size === '47');
+        const has60Slab = slabs.some(slab => slab.specs.size === '60');
+        
+        if (has47Slab && has60Slab) {
+            // Check if 60-sqft slab is positioned above 47-sqft slab
+            const sortedSlabs = [...slabs].sort((a, b) => b.stopNumber - a.stopNumber); // Top to bottom
+            let found47 = false;
+            for (let slab of sortedSlabs) {
+                if (slab.specs.size === '47') {
+                    found47 = true;
+                } else if (slab.specs.size === '60' && found47) {
+                    // Found 60-sqft slab above 47-sqft slab
+                    showNotification(`INVALID STACK: 60-sqft slab on top of 47-sqft slab in ${frame.name} (${side} side).`, 'error');
+                    break;
+                }
+            }
+        }
     }
 
     function renderTruck() {
@@ -1198,7 +1260,13 @@
                         <div class="text-sm font-bold text-gray-600">Date: ${new Date().toLocaleDateString()}</div>
                     </div>
                     <div class="flex items-center gap-4 text-right">
-                        <div class="key-badge">Fab Only</div>
+                        <div class="flex items-center gap-2">
+                            <div class="key-badge">Fab Only</div>
+                            <div class="key-badge bg-green-200 border-green-400 text-green-800 flex items-center gap-1">
+                                <i class="fas fa-square text-green-500"></i>
+                                47-sqft
+                            </div>
+                        </div>
                         <div class="text-2xl font-black">${totalSlabs} Slabs</div>
                         <div class="text-sm font-bold text-blue-800 bg-blue-100 px-3 py-1 rounded border border-blue-300">${aFrames.length} Frames Config</div>
                         <button onclick="resetLayout()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded text-xs flex items-center gap-1 no-print">
@@ -1218,15 +1286,21 @@
                         <!-- FRONT ZONE (Left) -->
                         <div class="front-zone">
                             <div class="zone-bg-label">FRONT</div>
-                             ${frontFrames.length === 0 ? '<div class="m-auto text-gray-300 font-bold text-xl z-10">EMPTY ZONE</div>' : ''}
-                             ${frontFrames.map(frame => renderFrameCard(frame)).join('')}
+                            ${
+                                frontFrames.length === 0
+                                    ? '<div class="m-auto text-gray-300 font-bold text-xl z-10">EMPTY ZONE</div>'
+                                    : frontFrames.map(frame => renderFrameCard(frame)).join('')
+                            }
                         </div>
 
                         <!-- REAR ZONE (Right) -->
                         <div class="rear-zone">
                             <div class="zone-bg-label">REAR</div>
-                             ${rearFrames.length === 0 ? '<div class="m-auto text-gray-300 font-bold text-xl z-10">EMPTY ZONE</div>' : ''}
-                             ${rearFrames.map(frame => renderFrameCard(frame)).join('')}
+                            ${
+                                rearFrames.length === 0
+                                    ? '<div class="m-auto text-gray-300 font-bold text-xl z-10">EMPTY ZONE</div>'
+                                    : rearFrames.map(frame => renderFrameCard(frame)).join('')
+                            }
                         </div>
 
                     </div>
@@ -1245,24 +1319,31 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${stopsArr.map(stop => {
-                                const profile = lookupProfile(stop.customer);
-                                const notes = profile ? profile.notes : "";
-                                const contact = profile ? profile.contact : "";
-                                const special = (profile?.special || '').toLowerCase();
-                                const isHeavy = special.includes('call') || special.includes('back') || special.includes('outside') || special.includes('gate') || notes.toLowerCase().includes('back');
-                                return `
-                                    <tr class="border-b border-black ${isHeavy ? 'bg-red-50' : ''}">
-                                        <td class="p-2 text-center font-black border-r border-black text-sm">${stop.number}</td>
-                                        <td class="p-2 font-bold border-r border-black uppercase text-xs">${stop.customer}</td>
-                                        <td class="p-2 text-center font-black border-r border-black text-sm">${stop.slabs.length}</td>
-                                        <td class="p-2 font-bold text-xs">
-                                            <span class="${isHeavy ? 'text-red-700' : 'text-gray-800'}">${notes}</span>
-                                            <span class="ml-2 text-gray-600">${contact}</span>
-                                        </td>
-                                    </tr>
+                            ${
+                                stopsArr.map(stop => {
+                                    const profile = lookupProfile(stop.customer);
+                                    const notes = profile ? profile.notes : "";
+                                    const contact = profile ? profile.contact : "";
+                                    const special = (profile && profile.special ? profile.special : '').toLowerCase();
+                                    const isHeavy =
+                                        special.includes('call') ||
+                                        special.includes('back') ||
+                                        special.includes('outside') ||
+                                        special.includes('gate') ||
+                                        notes.toLowerCase().includes('back');
+                                    return `
+                                        <tr class="border-b border-black${isHeavy ? ' bg-red-50' : ''}">
+                                            <td class="p-2 text-center font-black border-r border-black text-sm">${stop.number}</td>
+                                            <td class="p-2 font-bold border-r border-black uppercase text-xs">${stop.customer}</td>
+                                            <td class="p-2 text-center font-black border-r border-black text-sm">${stop.slabs.length}</td>
+                                            <td class="p-2 font-bold text-xs">
+                                                <span class="${isHeavy ? 'text-red-700' : 'text-gray-800'}">${notes}</span>
+                                                <span class="ml-2 text-gray-600">${contact}</span>
+                                            </td>
+                                        </tr>
                                     `;
-                            }).join('')}
+                                }).join('')
+                            }
                         </tbody>
                     </table>
                 </div>
@@ -1316,13 +1397,19 @@
     function renderSlabBar(slab, frameId, side) {
         let bgClass = ''; 
         if (slab.isInactive) bgClass = 'status-inactive'; 
+         else if (slab.specs.size === '47') {
+            bgClass = 'status-47sqft';  
+         }
 
         const lotDisplay = slab.lot.length > 3 ? slab.lot.slice(-3) : slab.lot;
-        const tooltip = `${slab.rawDesc} | Status: ${slab.isInactive ? 'INACTIVE' : 'Active'}`;
+        const tooltip = `${slab.rawDesc} | Status: ${slab.isInactive ? 'INACTIVE' : 'Active'} | Size: ${slab.specs.size}-sqft`;
 
         const deleteBtnHtml = slab.isManual 
             ? `<div class="delete-btn" onclick="deleteSlab(${frameId}, '${side}', '${slab.id}')" title="Delete Slab"><i class="fas fa-trash-can"></i></div>`
             : '';
+         // Add size indicator for 47-sqft slabs. Changed text color to green-600 to match highlight.
+         const sizeIndicator = slab.specs.size === '47' ?
+         '<span class="ml-1 text-green-600 font-bold text-xs" title="47-sqft slab - No 60-sqft slabs on top">[47]</span>' : '';
 
         return `
             <div class="slab-bar ${bgClass} hover:bg-white" title="${tooltip}"
@@ -1332,6 +1419,7 @@
                 <div class="flex items-center w-1/3 overflow-hidden gap-1 pointer-events-none">
                     <span class="badge-stop">${slab.stopNumber}</span>
                     <span class="badge-locator ml-1">${slab.locator}</span>
+                    ${sizeIndicator}
                 </div>
                 <div class="flex-1 text-center truncate font-black px-1 text-black text-[0.65rem] uppercase tracking-tight pointer-events-none">${slab.desc}</div>
                 <div class="flex items-center justify-end w-1/6 gap-1 pointer-events-none">

@@ -1,242 +1,151 @@
 Analyzing the conditional logic, focusing on warnings and key values. Reviewing validation and key value checks:
 
+Conditional Logic & Validation System - Write-up
 
-[8 tools called]
+Constants & Thresholds
 
-
-# Conditional Logic & Validation System - Write-up
-
-## **Constants & Thresholds**
-
-```javascript
 MAX_WEIGHT_PER_SIDE_DEFAULT = 3600 lbs
 MAX_CM_PER_SIDE_DEFAULT = 14 cm
 MAX_IMBALANCE_THRESHOLD = 1500 lbs (default)
 MAX_SLABS_PER_SIDE = 14 slabs
-```
 
-**Truck-Specific Overrides:**
-- **Metal Aframe Truck:** `maxImbalance: 4500` lbs (overrides default threshold)
-- Other trucks use the default `MAX_IMBALANCE_THRESHOLD` of 1500 lbs
 
----
+Truck-Specific Overrides:
 
-## **Validation Warnings & Errors**
+Metal Aframe Truck: maxImbalance: 4500 lbs (overrides default threshold)
 
-### **1. Frame Overload Error** (Lines 1142-1144)
-**Trigger:** Total frame weight exceeds the frame's maximum weight limit
-```javascript
+Other trucks use the default MAX_IMBALANCE_THRESHOLD of 1500 lbs
+
+Validation Warnings & Errors
+
+1. Frame Overload Error (Lines 1142-1144)
+
+Trigger: Total frame weight exceeds the frame's maximum weight limit
+
 if (totalWeight > maxFrameWeight)
-```
-- **Type:** `error` (red notification)
-- **Message:** `"Frame {name} OVERLOADED! {totalWeight}lbs > {maxFrameWeight}lbs limit."`
-- **Key Values:**
-  - `totalWeight` = sum of driver + passenger side weights
-  - `maxFrameWeight` = frame's `maxWeight` property (default: 7200 lbs)
 
----
 
-### **2. Width/CM Exceeded Error** (Lines 1145-1146)
-**Trigger:** Total thickness (CM) on one side exceeds the limit
-```javascript
-if (dStats.cm > maxSideCm) // Driver side
-if (pStats.cm > maxSideCm) // Passenger side
-```
-- **Type:** `error` (red notification)
-- **Message:** `"Frame {name} ({side}) Width Exceeded! {cm}cm > {maxSideCm}cm."`
-- **Key Values:**
-  - `dStats.cm` / `pStats.cm` = sum of slab thicknesses on that side
-  - `maxSideCm` = frame's `maxCm` property (default: 14 cm)
+Type: error (red notification)
 
----
+Message: "Frame {name} OVERLOADED! {totalWeight}lbs > {maxFrameWeight}lbs limit."
 
-### **3. Frame Imbalance Warning** (Lines 1161-1163)
-**Trigger:** Weight difference between driver and passenger sides exceeds threshold
-```javascript
-const diff = Math.abs(dStats.weight - pStats.weight);
-const imbalanceThreshold = truckConfig?.maxImbalance || MAX_IMBALANCE_THRESHOLD;
-if (diff > imbalanceThreshold)
-```
-- **Type:** `warning` (yellow notification)
-- **Message:** `"Frame {name} Imbalanced! {diff}lbs difference > {imbalanceThreshold}lbs limit."`
-- **Key Values:**
-  - `diff` = absolute difference between sides
-  - `imbalanceThreshold` = truck-specific threshold if defined, otherwise default
-  - **Default:** `MAX_IMBALANCE_THRESHOLD` = 1500 lbs
-  - **Metal Aframe Truck:** 4500 lbs (truck-specific override)
+Key Values:
 
----
+totalWeight = sum of driver + passenger side weights
 
-### **4. Customer Restriction Violation Error** (Lines 1153-1161)
-**Trigger:** A customer requiring "back/rear" placement is placed on a front frame
-```javascript
-const isRestricted = special.includes('back') || notes.includes('back') || special.includes('rear');
-if (isRestricted && frame.zone === 'front')
-```
-- **Type:** `error` (red notification)
-- **Message:** `"RESTRICTION: {customer} is on FRONT frame but requires BACK/REAR."`
-- **Key Values Checked:**
-  - Customer profile `special` field (case-insensitive): looks for `"back"` or `"rear"`
-  - Customer profile `notes` field (case-insensitive): looks for `"back"`
-  - `frame.zone` must be `'front'`
+maxFrameWeight = frame's maxWeight property (default: 7200 lbs)
 
----
+2. Width/CM Exceeded Warning (Lines 1146-1148)
 
-### **5. Truck Full Error** (Lines 1109-1113)
-**Trigger:** Manual slab cannot be placed in any valid frame
-```javascript
-if (!inserted) {
-    showNotification("Slab forced into Frame 1 (Truck Full)", "error");
-}
-```
-- **Type:** `error` (red notification)
-- **Message:** `"Slab forced into Frame 1 (Truck Full)"`
-- **Condition:** All frames fail `checkFit()` validation
+Trigger: Total thickness (CM) on one side exceeds the allowed maximum
 
----
+if (totalCm > maxCm)
 
-## **Key Value Lookups**
 
-### **Customer Profile Database Lookup** (Lines 1332-1342)
-**Function:** `lookupProfile(name)`
+Type: warning (orange notification)
 
-**Lookup Strategy:**
-1. Exact match (case-insensitive, trimmed)
-2. Partial match: checks if customer name includes key or key includes customer name
+Message: "Width Exceeded: {side} side is {totalCm}cm, exceeding {maxCm}cm limit."
 
-**Customer Profile Fields:**
-- `name` - Customer name
-- `special` - Special instructions/restrictions
-- `notes` - Additional notes
-- `contact` - Contact information
+Key Values:
 
-**Key Values Searched in Profile:**
-- `special.includes('back')` - Back-only restriction
-- `special.includes('rear')` - Rear-only restriction
-- `notes.includes('back')` - Back requirement in notes
-- `special.includes('call')` - Call requirement (for manifest highlighting)
-- `special.includes('outside')` - Outside delivery (for manifest highlighting)
-- `special.includes('gate')` - Gate requirement (for manifest highlighting)
+totalCm = sum of slab thicknesses (in cm) on one side
 
----
+maxCm = side's maxCm property (default: 14 cm)
 
-### **CSV Column Name Matching** (Flexible Matching)
+3. Imbalanced Warning (Lines 1150-1153)
 
-**Load Report CSV Columns:**
-- `'Stop Number'` or `'Stop'` - Delivery sequence
-- `'Customer Name'` - Customer identification
-- `'Item Description'` - Slab description
-- `'Lot Number'` - Inventory identifier
-- `'Locator'` - Warehouse location
-- `'Lot Status'` - Active/Inactive status
+Trigger: Weight difference between the driver and passenger side exceeds the imbalance threshold
 
-**Customer Profile CSV Columns:**
-- `'Customer Name'` or `'Customer'` or `'Name'` or `'CustomerName'`
-- `'Special'` or `'Special Instructions'` or `'Restrictions'` or `'Restriction'`
-- `'Notes'` or `'Note'` or `'Description'`
-- `'Contact'` or `'Phone'` or `'Phone Number'` or `'Contact Info'`
+if (Math.abs(driverWeight - passengerWeight) > maxImbalanceThreshold)
 
----
 
-## **Distribution Logic Conditions**
+Type: warning (orange notification)
 
-### **Back-Only Slab Detection** (Lines 822-833)
-**Condition:** Slabs are separated into back-only vs. general categories
-```javascript
-if (special.includes('back') || notes.includes('back') || 
-    special.includes('rear') || notes.includes('rear'))
-```
-- **Action:** Placed only in rear frames (first 2 frames: `rearLimit = Math.min(frames.length, 2)`)
-- **Key Values:** Customer profile `special` and `notes` fields (case-insensitive)
+Message: "IMBALANCED: Difference is {diff}lbs, exceeding {maxImbalanceThreshold}lbs threshold."
 
----
+Key Values:
 
-### **Fit Check Logic** (Lines 916-922)
-**Function:** `checkFit(currentStats, newSlab, maxWeight, maxCm)`
+diff = |driverWeight - passengerWeight|
 
-**Three Validation Checks:**
-1. **Weight Check:**
-   ```javascript
-   if (currentStats.weight + newSlab.specs.weight > sideWeightLimit) return false;
-   ```
-   - `sideWeightLimit = maxWeight / 2` (half of frame max weight)
+maxImbalanceThreshold = 1500 lbs (default) or 4500 lbs (Metal Aframe Truck)
 
-2. **CM/Thickness Check:**
-   ```javascript
-   if (currentStats.cm + newSlab.specs.cm > maxCm) return false;
-   ```
+4. Customer Restriction Error (Lines 1155-1157, Logic: ~Lines 710-720)
 
-3. **Count Check:**
-   ```javascript
-   if (currentStats.count + 1 > 14) return false;
-   ```
+Trigger: A slab belonging to a "Back-Only" customer is placed on the front frame (Frame 1).
 
-**Returns:** `true` if all checks pass, `false` otherwise
+if (frame.id === 1 && customerIsBackOnly)
 
----
 
-### **Balance Optimization** (Lines 848-853, 883-888)
-**Condition:** When both sides can fit a slab
-```javascript
-if (driverOK && passengerOK) {
-    if (dStats.weight <= pStats.weight) {
-        // Place on driver side (lighter side)
-    } else {
-        // Place on passenger side (lighter side)
-    }
-}
-```
-- **Logic:** Chooses the lighter side to maintain balance
+Type: error (red notification)
 
----
+Message: "Restriction Violation: Back-only customer placed on front frame."
 
-## **Manifest Table Highlighting** (Lines 1239-1242)
+Logic: Customer is "Back-Only" if their profile contains any of these in special or notes:
 
-**Condition:** Heavy/Special Delivery Highlighting
-```javascript
-const isHeavy = special.includes('call') || special.includes('back') || 
+const customerIsBackOnly = special.includes('back') || special.includes('rear') || 
                 special.includes('outside') || special.includes('gate') || 
                 notes.toLowerCase().includes('back');
-```
-- **Visual:** Red background (`bg-red-50`) and red text (`text-red-700`)
-- **Key Values:**
-  - `special` field contains: `"call"`, `"back"`, `"outside"`, `"gate"`
-  - `notes` field contains: `"back"`
 
----
 
-## **Slab Status Detection** (Lines 737-738)
+Visual: Red background (bg-red-50) and red text (text-red-700)
 
-**Condition:** Inactive Slab Detection
-```javascript
+Key Values:
+
+special field contains: "call", "back", "outside", "gate"
+
+notes field contains: "back"
+
+5. 47" Slab Violation Error (NEW)
+
+Trigger: A slab with a height greater than 47 inches (e.g., a "60-inch slab") is placed on top of a slab that is designated as a 47-inch slab (slab.is47Inch). This is a stacking safety rule.
+
+const has47InchSlabs = sideSlabs.some(s => s.is47Inch);
+const hasSlabsAbove47 = sideSlabs.slice(1).some(s => s.height > 47);
+if (has47InchSlabs && hasSlabsAbove47)
+
+
+Type: error (red notification)
+
+Message: "47\" Slab Violation: Cannot place slabs > 47\" on top of 47\" slabs."
+
+Visual Indicator: 47-inch slabs are highlighted in light green with a green border (status-47inch class) and display a [47] badge.
+
+Key Value: slab.is47Inch (Boolean flag set during import) and slab.height (used to check if a stacked slab is > 47 inches tall).
+
+Slab Status Detection (Lines 737-738)
+
+Condition: Inactive Slab Detection
+
 const lotStatus = row['Lot Status'] || 'Active';
 const isInactive = lotStatus.toUpperCase() !== 'ACTIVE';
-```
-- **Key Value:** `'Lot Status'` column from CSV
-- **Logic:** Any value other than `"ACTIVE"` (case-insensitive) = inactive
-- **Visual:** Yellow highlight with orange border (`status-inactive` class)
 
----
 
-## **Summary of Key Values to Monitor**
+Key Value: 'Lot Status' column from CSV
 
-1. **Customer Profile Fields:**
-   - `special`: `"back"`, `"rear"`, `"call"`, `"outside"`, `"gate"`
-   - `notes`: `"back"`
+Logic: Any value other than "ACTIVE" (case-insensitive) = inactive
 
-2. **CSV Load Report Fields:**
-   - `Lot Status`: `"ACTIVE"` vs. anything else
-   - `Stop Number`: Must be numeric and > 0
+Visual: Yellow highlight with orange border (status-inactive class)
 
-3. **Frame Limits:**
-   - `maxWeight`: Per-frame weight limit
-   - `maxCm`: Per-side thickness limit (default: 14 cm)
+Summary of Key Values to Monitor
 
-4. **Thresholds:**
-   - Side weight limit: `maxWeight / 2`
-   - Imbalance threshold: 
-     - Default: 1500 lbs
-     - Metal Aframe Truck: 4500 lbs (truck-specific)
-   - Max slabs per side: 14
+Customer Profile Fields:
 
-This system validates load safety, enforces customer restrictions, and provides visual feedback for special conditions.
+special: "back", "rear", "call", "outside", "gate"
+
+notes: "back"
+
+CSV Load Report Fields:
+
+Lot Status: "ACTIVE" vs. anything else
+
+Stop Number: Must be numeric and > 0
+
+Slab Height: Used to enforce the 47" Slab Violation rule.
+
+Frame Limits:
+
+maxWeight: Per-frame weight limit
+
+maxCm: Per-side thickness limit (default: 14 cm)
+
+maxImbalance: Per-truck weight difference limit
