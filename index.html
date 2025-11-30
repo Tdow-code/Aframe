@@ -489,6 +489,7 @@
         "Metal Aframe Truck": {
             name: "Metal Aframe Truck",
             description: "2-Frame Configuration for Metal Aframe Trucks",
+            maxImbalance: 4500,
             frames: [
                 { id: 1, zone: 'front', type: 'wood', name: "FRONT MIDDLE (F1)", maxWeight: 7200, maxCm: 14 },
                 { id: 2, zone: 'rear', type: 'wood', name: "BACK MIDDLE (F2)", maxWeight: 18000, maxCm: 30 },
@@ -1138,6 +1139,12 @@
 
     function validateLoad() {
         notificationArea.innerHTML = ''; 
+        
+        // Get truck-specific imbalance threshold if available
+        const truckConfigKey = APP_STATE.truckConfig || APP_STATE.truckName;
+        const truckConfig = truckConfigKey ? TRUCK_DB[truckConfigKey] : null;
+        const imbalanceThreshold = truckConfig?.maxImbalance || MAX_IMBALANCE_THRESHOLD;
+        
         APP_STATE.frames.forEach(frame => {
             const dStats = getSideStats(frame.driver);
             const pStats = getSideStats(frame.passenger);
@@ -1152,8 +1159,8 @@
             if (pStats.cm > maxSideCm) showNotification(`Frame ${frame.name} (Pass) Width Exceeded! ${pStats.cm}cm > ${maxSideCm}cm.`, 'error');
 
             const diff = Math.abs(dStats.weight - pStats.weight);
-            if (diff > MAX_IMBALANCE_THRESHOLD) {
-                showNotification(`Frame ${frame.name} Imbalanced! ${diff}lbs difference > ${MAX_IMBALANCE_THRESHOLD}lbs limit.`, 'warning');
+            if (diff > imbalanceThreshold) {
+                showNotification(`Frame ${frame.name} Imbalanced! ${diff}lbs difference > ${imbalanceThreshold}lbs limit.`, 'warning');
             }
 
             [...frame.driver, ...frame.passenger].forEach(slab => {

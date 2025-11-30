@@ -11,9 +11,13 @@ Analyzing the conditional logic, focusing on warnings and key values. Reviewing 
 ```javascript
 MAX_WEIGHT_PER_SIDE_DEFAULT = 3600 lbs
 MAX_CM_PER_SIDE_DEFAULT = 14 cm
-MAX_IMBALANCE_THRESHOLD = 1500 lbs
+MAX_IMBALANCE_THRESHOLD = 1500 lbs (default)
 MAX_SLABS_PER_SIDE = 14 slabs
 ```
+
+**Truck-Specific Overrides:**
+- **Metal Aframe Truck:** `maxImbalance: 4500` lbs (overrides default threshold)
+- Other trucks use the default `MAX_IMBALANCE_THRESHOLD` of 1500 lbs
 
 ---
 
@@ -46,17 +50,20 @@ if (pStats.cm > maxSideCm) // Passenger side
 
 ---
 
-### **3. Frame Imbalance Warning** (Lines 1148-1151)
+### **3. Frame Imbalance Warning** (Lines 1161-1163)
 **Trigger:** Weight difference between driver and passenger sides exceeds threshold
 ```javascript
 const diff = Math.abs(dStats.weight - pStats.weight);
-if (diff > MAX_IMBALANCE_THRESHOLD)
+const imbalanceThreshold = truckConfig?.maxImbalance || MAX_IMBALANCE_THRESHOLD;
+if (diff > imbalanceThreshold)
 ```
 - **Type:** `warning` (yellow notification)
-- **Message:** `"Frame {name} Imbalanced! {diff}lbs difference > {MAX_IMBALANCE_THRESHOLD}lbs limit."`
+- **Message:** `"Frame {name} Imbalanced! {diff}lbs difference > {imbalanceThreshold}lbs limit."`
 - **Key Values:**
   - `diff` = absolute difference between sides
-  - `MAX_IMBALANCE_THRESHOLD` = 1500 lbs
+  - `imbalanceThreshold` = truck-specific threshold if defined, otherwise default
+  - **Default:** `MAX_IMBALANCE_THRESHOLD` = 1500 lbs
+  - **Metal Aframe Truck:** 4500 lbs (truck-specific override)
 
 ---
 
@@ -227,7 +234,9 @@ const isInactive = lotStatus.toUpperCase() !== 'ACTIVE';
 
 4. **Thresholds:**
    - Side weight limit: `maxWeight / 2`
-   - Imbalance threshold: 1500 lbs
+   - Imbalance threshold: 
+     - Default: 1500 lbs
+     - Metal Aframe Truck: 4500 lbs (truck-specific)
    - Max slabs per side: 14
 
 This system validates load safety, enforces customer restrictions, and provides visual feedback for special conditions.
