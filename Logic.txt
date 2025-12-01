@@ -8,6 +8,7 @@ MAX_WEIGHT_PER_SIDE_DEFAULT = 3600 lbs
 MAX_CM_PER_SIDE_DEFAULT = 14 cm
 MAX_IMBALANCE_THRESHOLD = 1500 lbs (default)
 MAX_SLABS_PER_SIDE = 14 slabs
+SQ_FT_RESTRICTION_VALUE = 47 // The sq/ft threshold
 
 
 Truck-Specific Overrides:
@@ -95,22 +96,22 @@ special field contains: "call", "back", "outside", "gate"
 
 notes field contains: "back"
 
-5. 47" Slab Violation Error (NEW)
+5. SQ/FT Slab Violation Error (NEW)
 
-Trigger: A slab with a height greater than 47 inches (e.g., a "60-inch slab") is placed on top of a slab that is designated as a 47-inch slab (slab.is47Inch). This is a stacking safety rule.
+Trigger: A slab with a size greater than the SQ_FT_RESTRICTION_VALUE (e.g., a "large slab") is placed on top of a slab that is designated as a restricted sq/ft slab (slab.isSqFt). This is a stacking safety rule.
 
-const has47InchSlabs = sideSlabs.some(s => s.is47Inch);
-const hasSlabsAbove47 = sideSlabs.slice(1).some(s => s.height > 47);
-if (has47InchSlabs && hasSlabsAbove47)
+const hasSqFtSlabs = sideSlabs.some(s => s.isSqFt);
+const hasSlabsAboveSqFt = sideSlabs.slice(1).some(s => s.height > SQ_FT_RESTRICTION_VALUE); // Using slab.height as the sq/ft value
+if (hasSqFtSlabs && hasSlabsAboveSqFt)
 
 
 Type: error (red notification)
 
-Message: "47\" Slab Violation: Cannot place slabs > 47\" on top of 47\" slabs."
+Message: "SQ/FT Slab Violation: Cannot place slabs > {SQ_FT_RESTRICTION_VALUE}sq/ft on top of a base sq/ft slab."
 
-Visual Indicator: 47-inch slabs are highlighted in light green with a green border (status-47inch class) and display a [47] badge.
+Visual Indicator: Restricted sq/ft slabs are highlighted in light green with a green border (status-sqft class) and display a [SQ/FT] badge.
 
-Key Value: slab.is47Inch (Boolean flag set during import) and slab.height (used to check if a stacked slab is > 47 inches tall).
+Key Value: slab.isSqFt (Boolean flag set during import) and slab.height (used to check if a stacked slab is > SQ_FT_RESTRICTION_VALUE sq/ft).
 
 Slab Status Detection (Lines 737-738)
 
@@ -140,7 +141,7 @@ Lot Status: "ACTIVE" vs. anything else
 
 Stop Number: Must be numeric and > 0
 
-Slab Height: Used to enforce the 47" Slab Violation rule.
+Slab Height: Used to enforce the SQ/FT Slab Violation rule (now represents sq/ft).
 
 Frame Limits:
 

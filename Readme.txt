@@ -1,4 +1,4 @@
-A-Frame Builder v49.5
+A-Frame Builder v49.5 (sq/ft Update)
 
 A web-based tool for planning and visualizing the loading of stone slabs onto A-frame trucks with intelligent distribution, drag-and-drop rearrangement, and comprehensive validation.
 
@@ -24,9 +24,9 @@ Weight limits (per side and total)
 
 Thickness constraints (CM limits)
 
-Customer restrictions (back-only requirements)
+Customer Restrictions (back-only requirements)
 
-Slab Stacking Rules (47" restriction)
+Slab Stacking Rules (sq/ft restriction)
 
 Load Balancing: Balances load between driver/passenger sides.
 
@@ -48,7 +48,7 @@ Customer Restrictions: Enforces back/front placement requirements.
 
 Weight Calculations: Automatic weight estimation based on slab size and thickness.
 
-NEW: Slab Height Restriction: Alerts if a tall slab (e.g., > 47 inches) is placed on top of a restricted 47-inch slab.
+NEW: Slab SQ/FT Restriction: Alerts if a large slab (e.g., > 47 sq/ft) is placed on top of a restricted sq/ft base slab.
 
 Output
 
@@ -109,15 +109,17 @@ Imbalanced: Weight difference between sides exceeds threshold (1,500 lbs default
 
 Restriction Violation: Back-only customer placed on front frame.
 
-47" SLAB VIOLATION (NEW): Slabs taller than 47 inches cannot be stacked on top of a 47-inch slab.
+SQ/FT SLAB VIOLATION (NEW): Slabs larger than the restricted size cannot be stacked on top of a base sq/ft slab.
 
 Version History
 
-v49.5 (Current)
+v49.5 (Current) - SQ/FT Update
 
-Added 47" Slab Height Restriction: Implements a safety rule to prevent placing slabs taller than 47 inches on top of a 47-inch base slab.
+Updated Metric: All mentions of "inches" for slab size restriction replaced with "sq/ft".
 
-Visual Enhancement: 47-inch slabs are now highlighted in light green with a badge for easy identification.
+Added SQ/FT Slab Restriction: Implements a safety rule to prevent placing large slabs on top of a restricted sq/ft base slab.
+
+Visual Enhancement: Restricted sq/ft slabs are now highlighted in light green with a badge for easy identification.
 
 v49.4 (Previous)
 
